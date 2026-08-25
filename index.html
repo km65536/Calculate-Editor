@@ -11,6 +11,7 @@
   --ink-800: #182a44;
   --ink-700: #22385a;
   --line-soft: rgba(154, 190, 224, 0.14);
+  --line-softer: rgba(154, 190, 224, 0.07);
   --paper: #eef4f6;
   --paper-line: rgba(15, 40, 60, 0.08);
   --text-bright: #eef6fb;
@@ -20,6 +21,7 @@
   --accent-soft: rgba(226, 165, 58, 0.28);
   --success: #7fd8a4;
   --danger: #e0554b;
+  --assign: #b48af0;
   --oneway: #57c7d4;
   --wall-fill: #0c0c0e;
   --wall-edge: #d1453d;
@@ -27,6 +29,8 @@
   --number-text: #0c2c3d;
   --symbol-fill: #fbe9a0;
   --symbol-text: #40340a;
+  --letter-fill: #ddd0f7;
+  --letter-text: #392a5c;
   --fixed-edge: #d1453d;
   --cell-size: 32px;
 }
@@ -34,6 +38,7 @@
 html, body { height: 100%; }
 body {
   margin: 0;
+  overflow-x: hidden; /* 何かの計算がズレて幅がはみ出た場合でも、ページ全体が横スクロールしないようにする保険 */
   background:
     radial-gradient(circle at 15% -10%, #1c3455 0%, transparent 45%),
     radial-gradient(circle at 100% 0%, #16283f 0%, transparent 40%),
@@ -47,7 +52,7 @@ body {
 #app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 20px 16px 60px;
+  padding: 20px 16px 96px; /* 下に浮いている道具バーに隠れないよう余白を取る（コンパクトになったので前より少なめでよい） */
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -84,14 +89,19 @@ h1 {
 }
 h1 span { color: var(--text-bright); }
 
-.layout {
+.layout-secondary {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: 20px;
   align-items: start;
 }
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout-secondary { grid-template-columns: 1fr; }
+}
+
+.panel-board {
+  /* 盤面プレビューをメインとして目立たせる：横幅いっぱいに使い、盤面自体も大きめに表示する */
+  max-width: none;
 }
 
 .panel {
@@ -151,63 +161,229 @@ input[type="number"] { width: 72px; }
 .btn-block { width: 100%; margin-top: 6px; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ---- パレット ---- */
-.palette-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  margin-bottom: 10px;
+/* ---- 道具バー：盤面プレビューの横に置く独立した棒。コンパクトに保つ ---- */
+.board-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0; /* flexの「中身より縮まない」トラップを防ぐ保険 */
 }
+@media (max-width: 720px) {
+  .board-row { flex-direction: column; }
+}
+/* スマホの縦画面のときは、ツールバーは盤面の上ではなく下に来るようにする */
+@media (max-width: 720px) and (orientation: portrait) {
+  .board-row { flex-direction: column-reverse; }
+}
+
+#editor-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 132px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(15,26,42,0.98), rgba(9,16,27,0.99));
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.toolbar-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.toolbar-subpanel {
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 36vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 6px;
+}
+.toolbar-subpanel:not([hidden]) {
+  display: flex;
+}
+
+.swatch {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: ui-monospace, monospace; font-weight: 700; font-size: 12px;
+  flex-shrink: 0;
+  border: 2px solid var(--line-soft);
+}
+.toolbar-current-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.toolbar-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toolbar-cat-btn {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: var(--ink-800);
+  color: var(--text-bright);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.toolbar-cat-btn.cat-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.toolbar-cat-btn.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* ツールバー内のリサイズ・全部空にする操作 */
+.toolbar-size {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 6px;
+}
+.toolbar-size-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.toolbar-size-row input[type="number"] {
+  min-width: 0;
+  flex: 1 1 34px;
+  padding: 4px 2px;
+  font-size: 11.5px;
+  text-align: center;
+}
+/* 標準の増減スピナー(▲▼)は幅を食って数字が潰れる原因になるので消す */
+.toolbar-size-row input[type="number"]::-webkit-inner-spin-button,
+.toolbar-size-row input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.toolbar-size-row input[type="number"] { -moz-appearance: textfield; }
+.toolbar-size-x { color: var(--text-dim); font-size: 11px; flex-shrink: 0; }
+.btn-compact {
+  flex: 1 1 auto;
+  padding: 5px 6px;
+  font-size: 10.5px;
+  border-radius: 7px;
+}
+
+/* スマホなど横幅が狭い画面では、縦に積む棒ではなく横並びのコンパクトな帯にする。
+   （対象にしている .toolbar-* ルールより後ろに書くこと。CSSは同じ詳細度なら
+    後に書かれた方が勝つので、先に書くと常にこちらが負けて反映されなくなる） */
+@media (max-width: 720px) {
+  #editor-toolbar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .toolbar-current { border-bottom: none; padding-bottom: 0; flex: 0 0 auto; }
+  .toolbar-categories { flex-direction: row; flex-wrap: wrap; flex: 1 1 auto; }
+  .toolbar-size { flex-direction: row; border-top: none; padding-top: 0; margin-left: auto; }
+  .toolbar-size-row { flex-direction: row; }
+  .toolbar-subpanel { flex-basis: 100%; order: 10; }
+}
+
+/* ---- 盤面プレビューの右端・下端にある、1マスずつサイズを変えるボタン ---- */
+.board-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.board-h-group {
+  display: flex;
+  align-items: center; /* 縦のステッパー(＋－)が盤面の高さの真ん中らへんに来るように */
+  gap: 4px;
+  min-width: 0; /* flexの「中身より縮まない」トラップを防ぐ保険 */
+}
+.size-stepper {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.size-stepper-v { flex-direction: column; }
+/* 下段：横のステッパー(－＋)を「盤面(#grid-wrap)の幅の真ん中」に合わせる。
+   縦ステッパーの分の幅(スペーサー)を右側に足しておくことで、
+   盤面全体ではなく盤面そのものの中央にそろう。 */
+.board-bottom-row {
+  display: flex;
+}
+.board-bottom-grid-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+.size-stepper-spacer {
+  width: 30px; /* size-stepper-v の幅(26px) + board-h-groupのgap(4px) と合わせる */
+  flex-shrink: 0;
+}
+.stepper-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--line-soft);
+  background: var(--ink-800);
+  color: var(--text-bright);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stepper-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+
 .tool-btn {
   aspect-ratio: 1;
-  border-radius: 6px;
+  min-width: 36px;
+  border-radius: 8px;
   border: 2px solid var(--line-soft);
   background: var(--ink-950);
   color: var(--text-bright);
   font-family: ui-monospace, monospace;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
 .tool-btn.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.tool-btn[data-kind="wall"] { background: var(--wall-fill); border-color: var(--wall-edge); }
-.tool-btn[data-kind="oneway"] { background: #142230; border-color: rgba(87,199,212,0.45); color: var(--oneway); }
+.tool-btn[data-kind="wall"] { background: var(--ink-950); border-color: var(--wall-edge); color: var(--wall-edge); }
+.tool-btn[data-kind="edge-oneway"] { background: #142230; border-color: rgba(87,199,212,0.45); color: var(--oneway); }
 .tool-btn[data-kind="number"] { background: var(--number-fill); color: var(--number-text); }
+.tool-btn[data-kind="letter"] { background: var(--letter-fill); color: var(--letter-text); }
 .tool-btn[data-kind="symbol"] { background: var(--symbol-fill); color: var(--symbol-text); }
-.tool-btn[data-kind="empty"] { background: var(--paper); color: #33475a; font-size: 11px; }
-
-.fixed-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--text-dim);
-  background: var(--ink-950);
-  border: 1px solid var(--line-soft);
-  border-radius: 7px;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-}
-.fixed-toggle input { width: 16px; height: 16px; }
-
-.current-tool-preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-top: 8px;
-}
-.current-tool-preview .swatch {
-  width: 30px; height: 30px;
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: ui-monospace, monospace; font-weight: 700; font-size: 15px;
-  flex-shrink: 0;
-}
 
 /* ---- グリッド編集エリア ---- */
 #grid-wrap {
@@ -215,6 +391,9 @@ input[type="number"] { width: 72px; }
   border-radius: 10px;
   padding: 4px;
   max-height: 70vh;
+  max-width: 100%; /* 計算がズレても、この枠から絶対にはみ出さないようにする最終防御ライン */
+  flex: 1 1 auto;
+  min-width: 0; /* flexアイテムとして正しく縮められるように */
   /* 背景（方眼線）は実際の盤面サイズと同じ #grid 側につける。
      ここに付けると、盤面より広い枠全体に方眼が伸びて、
      指定した幅より盤面が広く見えるバグになる（実際に発生した）。 */
@@ -227,7 +406,11 @@ input[type="number"] { width: 72px; }
     linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
   background-size: var(--cell-size) var(--cell-size);
   border-radius: 6px;
-  box-shadow: 0 20px 50px -20px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(15,40,60,0.15);
+  /* border だと box-sizing: border-box の影響で右端・下端が数px見切れるため box-shadow で描く */
+  box-shadow:
+    0 0 0 3px var(--wall-edge),
+    0 20px 50px -20px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(15, 40, 60, 0.15);
 }
 .cell {
   position: absolute;
@@ -251,18 +434,183 @@ input[type="number"] { width: 72px; }
   font-family: ui-monospace, "SFMono-Regular", "Courier New", monospace;
   font-size: calc(var(--cell-size) * 0.46);
   box-sizing: border-box;
+  transition: left 0.14s linear, top 0.14s linear, box-shadow 0.15s ease;
 }
-.block-wall { background: var(--wall-fill); border: 2px solid transparent; }
-.block-wall.edge-t { border-top-color: var(--wall-edge); }
-.block-wall.edge-r { border-right-color: var(--wall-edge); }
-.block-wall.edge-b { border-bottom-color: var(--wall-edge); }
-.block-wall.edge-l { border-left-color: var(--wall-edge); }
-.block-oneway { background: #142230; border: 2px solid rgba(87, 199, 212, 0.45); border-radius: 4px; }
-.oneway-arrow { color: var(--oneway); font-size: calc(var(--cell-size) * 0.55); line-height: 1; }
+/* 壁：辺に細い赤いバーとして描く */
+.edge-wall {
+  position: absolute;
+  z-index: 2;
+  background: var(--wall-edge);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.edge-wall-v { width: 6px; }
+.edge-wall-h { height: 6px; }
+
+/* 一方通行：右向きの画像1枚だけを使い回す。
+   left = 反転(scaleX)、down/up = 回転(rotate)。
+   両端ティール→中央黒のグラデーションと帯の形は画像に焼き込み済み。 */
+.edge-oneway-bar {
+  position: absolute;
+  z-index: 2;
+  width: 12px;
+  height: var(--cell-size);
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image: url("assets/arrow.png");
+}
+.edge-oneway-bar.dir-left { transform: scaleX(-1); }
+.edge-oneway-bar.dir-down { transform: rotate(90deg); }
+.edge-oneway-bar.dir-up { transform: rotate(-90deg); }
+
+/* 辺のクリック判定エリア（見た目は透明、境目にまたがる細長い帯） */
+.edge-hitzone {
+  position: absolute;
+  z-index: 4;
+  cursor: pointer;
+  background: transparent;
+}
+.edge-hitzone:hover { background: rgba(226, 165, 58, 0.28); }
+.edge-hitzone-v { width: 12px; }
+.edge-hitzone-h { height: 12px; }
+
+/* 移動モード：選択中のブロックと、移動先として選べるマスのハイライト */
+.block.move-selected {
+  box-shadow: 0 0 0 3px var(--accent), 0 6px 14px -4px rgba(226, 165, 58, 0.6);
+  z-index: 5;
+}
+.move-reachable-cell {
+  position: absolute;
+  z-index: 1;
+  background: rgba(226, 165, 58, 0.28);
+  border: 1.5px dashed var(--accent);
+  border-radius: 4px;
+  pointer-events: none;
+}
 .block-number { background: var(--number-fill); color: var(--number-text); border-radius: 4px; }
 .block-symbol { background: var(--symbol-fill); color: var(--symbol-text); border-radius: 4px; }
-.block-number.fixed, .block-symbol.fixed { border: 2px solid var(--fixed-edge); }
+.block-symbol.eq-unsatisfied { background: #f0b6a8; }
+.block-letter { background: var(--letter-fill); color: var(--letter-text); border-radius: 4px; }
+.block-number.fixed, .block-symbol.fixed, .block-letter.fixed { border: 2px solid var(--fixed-edge); }
 .symbol-glyph.rotate { display: inline-block; transform: rotate(90deg); }
+
+/* 成立した等式を囲む枠（本体ゲームと同じ視覚効果） */
+.equation-glow {
+  position: absolute;
+  border-radius: 10px;
+  border: 3px solid var(--success);
+  background: rgba(126, 216, 164, 0.22);
+  box-shadow:
+    0 0 0 3px rgba(126, 216, 164, 0.25),
+    0 0 26px rgba(126, 216, 164, 0.85),
+    0 0 54px rgba(126, 216, 164, 0.45),
+    inset 0 0 18px rgba(126, 216, 164, 0.4);
+  pointer-events: none;
+  animation: eq-glow-pop 0.4s ease-out, eq-glow-pulse 1.6s ease-in-out 0.4s infinite;
+}
+@keyframes eq-glow-pop {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes eq-glow-pulse {
+  0%, 100% { opacity: 0.88; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.015); }
+}
+.assignment-glow {
+  position: absolute;
+  border-radius: 10px;
+  border: 3px solid var(--assign);
+  background: rgba(180, 138, 240, 0.22);
+  box-shadow:
+    0 0 0 3px rgba(180, 138, 240, 0.25),
+    0 0 26px rgba(180, 138, 240, 0.85),
+    0 0 54px rgba(180, 138, 240, 0.45),
+    inset 0 0 18px rgba(180, 138, 240, 0.4);
+  pointer-events: none;
+  animation: eq-glow-pop 0.4s ease-out, assign-glow-pulse 1.6s ease-in-out 0.4s infinite;
+}
+@keyframes assign-glow-pulse {
+  0%, 100% { opacity: 0.88; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.015); }
+}
+.assignment-conflict {
+  position: absolute;
+  z-index: 7;
+  border-radius: 10px;
+  border: 3px solid var(--danger);
+  background: rgba(224, 85, 75, 0.18);
+  box-shadow:
+    0 0 0 3px rgba(224, 85, 75, 0.22),
+    0 0 24px rgba(224, 85, 75, 0.65),
+    inset 0 0 16px rgba(224, 85, 75, 0.32);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: eq-glow-pop 0.3s ease-out;
+}
+.assignment-conflict::after {
+  content: "×";
+  color: rgba(255, 255, 255, 0.95);
+  font-family: ui-monospace, "Courier New", monospace;
+  font-weight: 700;
+  font-size: calc(var(--cell-size) * 0.8);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(224, 85, 75, 0.9), 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.assignment-conflict-hitzone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--cell-size) * 0.8);
+  height: calc(var(--cell-size) * 0.8);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: help;
+}
+.eq-warning-badge {
+  position: absolute;
+  z-index: 6;
+  width: calc(var(--cell-size) * 0.34);
+  height: calc(var(--cell-size) * 0.34);
+  min-width: 14px;
+  min-height: 14px;
+  background-image: url("assets/warning_badge.png");
+  background-size: 100% 100%;
+  pointer-events: none;
+}
+/* 文字ブロック（変数）の値ツールチップ（本体ゲームと同じ） */
+.var-tooltip {
+  position: fixed;
+  z-index: 400;
+  transform: translate(-50%, -100%);
+  background: var(--ink-950);
+  color: var(--text-bright);
+  border: 1px solid var(--letter-fill);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-family: ui-monospace, "Courier New", monospace;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.6);
+}
+.var-tooltip.visible { opacity: 1; }
+.var-tooltip.tooltip-danger { border-color: var(--danger); }
+.var-tooltip-value { font-size: 13px; font-weight: 700; }
+.var-tooltip-reason { font-size: 12px; font-weight: 600; color: var(--danger); }
+
+.symbol-glyph.glyph-img {
+  display: block;
+  width: 60%;
+  height: 60%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
 
 /* ---- ステータス / JSON出力 ---- */
 .status-line {
@@ -275,22 +623,145 @@ input[type="number"] { width: 72px; }
 .status-ok { background: rgba(127, 216, 164, 0.12); border: 1px solid rgba(127, 216, 164, 0.35); color: var(--success); }
 .status-warn { background: rgba(224, 85, 75, 0.12); border: 1px solid rgba(224, 85, 75, 0.35); color: #ff9a90; }
 
-.legend {
-  font-size: 11.5px;
-  color: var(--text-dim);
-  line-height: 1.9;
-  margin-top: 4px;
+.footnote { text-align: center; color: var(--text-dim); font-size: 12px; opacity: 0.75; }
+
+/* ---- お試しプレイ：別ウィンドウ風のモーダル ---- */
+.play-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  padding: 16px;
+  background: rgba(4, 8, 14, 0.72);
 }
-.legend code {
-  background: var(--ink-950);
+/* [hidden]属性による display:none は、同じ詳細度のクラスセレクタで上書きされてしまう
+   （以前 .clear-overlay で発生したのと同じバグ）。:not([hidden]) で明示的に守る。 */
+.play-modal:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-modal-panel {
+  position: relative; /* play-clear-overlay をこの中に絶対配置で重ねるため */
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow: auto;
+  background: linear-gradient(180deg, var(--ink-800), var(--ink-900));
   border: 1px solid var(--line-soft);
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: var(--text-bright);
-  font-family: ui-monospace, monospace;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* クリア演出：本体ゲームの .clear-overlay の見た目をそのまま使う。
+   位置だけ、画面全体ではなくモーダルパネルの中に重なるよう上書きする。 */
+.play-clear-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+}
+.play-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.play-modal-title {
+  font-weight: 800;
+  color: var(--accent-strong);
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.play-modal-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#play-modal-grid-slot {
+  display: flex;
+  justify-content: center;
+}
+/* 本体ゲームの .hint（ヒント文の表示）をそのまま移植 */
+.hint {
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--line-softer);
+  border-radius: 0 8px 8px 0;
 }
 
-.footnote { text-align: center; color: var(--text-dim); font-size: 12px; opacity: 0.75; }
+/* クリア演出（本体ゲームの style.css .clear-overlay 一式をそのまま移植） */
+.clear-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 20, 32, 0.82);
+  z-index: 50;
+  animation: fade-in 0.2s ease;
+}
+/* [hidden]属性のときは必ず非表示にする（.play-modal と同じ理由でクラスとhiddenを分けて守る） */
+.clear-overlay:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.clear-card {
+  background: linear-gradient(180deg, var(--ink-800), var(--ink-900));
+  border: 1px solid var(--accent-soft);
+  border-radius: 16px;
+  padding: 36px 44px;
+  text-align: center;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7);
+}
+.clear-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  font-weight: 700;
+}
+.clear-title {
+  margin: 6px 0 20px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.04em;
+}
+.clear-preview {
+  position: relative;
+  margin: 0 auto 22px;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--paper-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+  background-size: var(--cell-size) var(--cell-size);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px var(--wall-edge),
+    inset 0 0 0 1px rgba(15, 40, 60, 0.15),
+    0 10px 22px -12px rgba(0, 0, 0, 0.55);
+}
+.clear-preview .block {
+  cursor: default !important;
+  transition: none;
+}
+.clear-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
 </style>
 </head>
 <body>
@@ -300,81 +771,77 @@ input[type="number"] { width: 72px; }
     <h1>EQUATION BLOCKS <span>— マップエディタ</span></h1>
   </header>
 
-  <div class="layout">
-    <!-- ===== 左サイドバー ===== -->
-    <div>
-      <div class="panel">
-        <h2>ステージ情報</h2>
-        <label class="field">
-          <span class="lbl">id</span>
-          <input type="text" id="meta-id" value="level5">
-        </label>
-        <label class="field">
-          <span class="lbl">name（ステージ選択に出る名前）</span>
-          <input type="text" id="meta-name" value="ステージ5：新しいステージ">
-        </label>
-        <label class="field">
-          <span class="lbl">hint（ゲーム内に出るヒント文）</span>
-          <textarea id="meta-hint" rows="3">ここにヒント文を書く（答えの式そのものは書かないこと！）</textarea>
-        </label>
-      </div>
-
-      <div class="panel">
-        <h2>盤面サイズ</h2>
-        <div class="size-row">
-          <span>幅</span><input type="number" id="size-w" min="3" max="40" value="9">
-          <span>高さ</span><input type="number" id="size-h" min="3" max="30" value="7">
-          <button class="btn" id="btn-resize">リサイズ</button>
-        </div>
-        <div class="btn-row">
-          <button class="btn" id="btn-fill-walls">周囲を壁で囲む</button>
-          <button class="btn" id="btn-clear">全部空にする</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>置くブロック（パレット）</h2>
-        <div class="palette-grid" id="palette-basic"></div>
-        <div class="palette-grid" id="palette-digits"></div>
-        <div class="palette-grid" id="palette-symbols"></div>
-        <label class="fixed-toggle">
-          <input type="checkbox" id="toggle-fixed">
-          固定ブロックとして置く（数字・記号のみ有効。動かせなくなる）
-        </label>
-        <div class="current-tool-preview">
+  <!-- ===== メイン：盤面プレビュー（左に道具バー、右に盤面） ===== -->
+  <div class="panel panel-board">
+    <h2>
+      盤面プレビュー（クリックで編集）
+      <button class="btn btn-primary" id="btn-play" style="float:right; margin-top:-4px;">▶ お試しプレイ</button>
+    </h2>
+    <div class="board-row">
+      <!-- 道具バー：画面に固定するのではなく、盤面の横に置く独立した棒。
+           カテゴリを選ぶと、その下に詳細（数字なら0〜9など）が開く -->
+      <div id="editor-toolbar">
+        <div class="toolbar-current">
           <div class="swatch" id="tool-swatch"></div>
-          <div>今選んでいる道具：<strong id="tool-label">壁</strong><br>マス目をクリック（ドラッグでまとめて塗れます）。右クリックで消去。</div>
+          <div class="toolbar-current-label" id="tool-label">空きマス</div>
+        </div>
+        <div class="toolbar-categories" id="toolbar-categories"></div>
+        <div id="toolbar-subpanel" class="toolbar-subpanel" hidden></div>
+        <div class="toolbar-size">
+          <div class="toolbar-size-row">
+            <input type="number" id="size-w" min="3" max="40" value="9" title="幅">
+            <span class="toolbar-size-x">×</span>
+            <input type="number" id="size-h" min="3" max="30" value="7" title="高さ">
+          </div>
+          <div class="toolbar-size-row">
+            <button class="btn btn-compact" id="btn-resize">リサイズ</button>
+            <button class="btn btn-compact" id="btn-clear">全部空に</button>
+          </div>
         </div>
       </div>
-
-      <div class="panel">
-        <h2>凡例</h2>
-        <div class="legend">
-          <code>.</code> 空きマス　<code>#</code> 壁<br>
-          <code>3</code> 動く数字　<code>3!</code> 固定数字<br>
-          <code>+ - x / ( )</code> 動く記号　<code>+!</code>のように固定も可<br>
-          <code>=</code> 横の＝　<code>|</code> 縦の＝(‖)<br>
-          <code>&gt; &lt; ^ v</code> 一方通行（矢印の向きに進む時だけ通れる。動かせない）
+      <div class="board-area">
+        <div class="board-h-group">
+          <div id="grid-wrap"><div id="grid"></div></div>
+          <div class="size-stepper size-stepper-v">
+            <button class="stepper-btn" id="btn-width-inc" title="幅を+1">＋</button>
+            <button class="stepper-btn" id="btn-width-dec" title="幅を-1">－</button>
+          </div>
+        </div>
+        <div class="board-bottom-row">
+          <div class="board-bottom-grid-slot">
+            <div class="size-stepper size-stepper-h">
+              <button class="stepper-btn" id="btn-height-dec" title="高さを-1">－</button>
+              <button class="stepper-btn" id="btn-height-inc" title="高さを+1">＋</button>
+            </div>
+          </div>
+          <div class="size-stepper-spacer"></div>
         </div>
       </div>
     </div>
+    <div id="status" class="status-line status-ok">読み込み中…</div>
+  </div>
 
-    <!-- ===== メイン：盤面編集 + JSON出力 ===== -->
-    <div>
-      <div class="panel">
-        <h2>盤面プレビュー（クリックで編集）</h2>
-        <div id="grid-wrap"><div id="grid"></div></div>
-        <div id="status" class="status-line status-ok">読み込み中…</div>
-      </div>
+  <!-- ===== 下：ステージ情報・JSON をコンパクトに ===== -->
+  <div class="layout-secondary">
+    <div class="panel">
+      <h2>ステージ情報</h2>
+      <label class="field">
+        <span class="lbl">name</span>
+        <input type="text" id="meta-name" value="新しいステージ">
+      </label>
+      <label class="field">
+        <span class="lbl">hint（ゲーム内に出るヒント文。答えの式そのものは書かないこと！）</span>
+        <textarea id="meta-hint" rows="2">ここにヒント文を書く（答えの式そのものは書かないこと！）</textarea>
+      </label>
+    </div>
 
-      <div class="panel">
-        <h2>JSON（data/level*.json にそのまま保存できます）</h2>
-        <textarea id="json-output" rows="14" spellcheck="false"></textarea>
-        <div class="btn-row" style="margin-top:10px;">
-          <button class="btn" id="btn-apply-json">↑ このJSONを読み込んで盤面に反映</button>
-          <button class="btn" id="btn-copy-json">コピー</button>
-          <button class="btn btn-primary" id="btn-download-json">ダウンロード</button>
-        </div>
+    <div class="panel">
+      <h2>JSON（tools/puzzle_dropper.py にドラッグすれば data/ に自動配置されます）</h2>
+      <textarea id="json-output" rows="10" spellcheck="false"></textarea>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn" id="btn-apply-json">↑ このJSONを読み込んで盤面に反映</button>
+        <button class="btn" id="btn-copy-json">コピー</button>
+        <button class="btn btn-primary" id="btn-download-json">ダウンロード</button>
       </div>
     </div>
   </div>
@@ -384,6 +851,36 @@ input[type="number"] { width: 72px; }
   </p>
 </div>
 
+<!-- お試しプレイ：本体ゲームと同じ盤面を、別ウィンドウ（モーダル）として編集画面の上に重ねて表示する。
+     「ひとつ戻す」「最初から」も本体ゲームと同じ機能として使える。
+     成立した時のクリア演出（オーバーレイ＋盤面ミニプレビュー）も本体ゲームと同じ見た目にしてある。 -->
+<div id="play-modal" class="play-modal" hidden>
+  <div class="play-modal-panel">
+    <div class="play-modal-header">
+      <div class="play-modal-title">▶ お試しプレイ</div>
+      <div class="play-modal-actions">
+        <button class="btn btn-compact" id="btn-play-undo" disabled>ひとつ戻す</button>
+        <button class="btn btn-compact btn-ghost" id="btn-play-reset">最初から</button>
+        <button class="btn btn-compact btn-primary" id="btn-play-close">✕ 編集に戻る</button>
+      </div>
+    </div>
+    <div id="play-modal-hint" class="hint" hidden></div>
+    <div id="play-modal-grid-slot"></div>
+
+    <!-- 本体ゲームの #clear-overlay と全く同じ構成（見出し・タイトル・ミニプレビュー・もう一度遊ぶ） -->
+    <div id="play-clear-overlay" class="clear-overlay play-clear-overlay" hidden>
+      <div class="clear-card">
+        <p class="clear-eyebrow">SOLVED</p>
+        <p class="clear-title">CLEAR!</p>
+        <div id="play-clear-preview" class="clear-preview" aria-hidden="true"></div>
+        <div class="clear-actions">
+          <button id="btn-play-clear-replay" class="btn btn-primary" type="button">もう一度遊ぶ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -391,37 +888,42 @@ input[type="number"] { width: 72px; }
    本体ゲーム(main.js)と同じトークン仕様・パーサー/判定ロジック
    ======================================================== */
 const SYMBOL_TOKEN_ALIASES = {
-  "+": "+", "-": "-", x: "×", "×": "×", "/": "÷", "÷": "÷", "(": "(", ")": ")",
+  "+": "+", "-": "-", "*": "×", "×": "×", "/": "÷", "÷": "÷", "(": "(", ")": ")",
 };
 const OP_MAP = { "+": "+", "-": "-", "×": "*", "÷": "/" };
+const LETTER_SET = new Set(["a", "b", "c", "d", "x", "y", "z", "f", "g", "h"]);
 
 function parseCellToken(rawToken, x, y) {
   const token = rawToken == null ? "." : String(rawToken).trim();
   if (token === "." || token === "") return null;
-  if (token === "#") return { type: "wall", x, y };
-  if (token === ">") return { type: "oneway", direction: "right", x, y };
-  if (token === "<") return { type: "oneway", direction: "left", x, y };
-  if (token === "^") return { type: "oneway", direction: "up", x, y };
-  if (token === "v" || token === "V") return { type: "oneway", direction: "down", x, y };
   let core = token;
   let fixed = false;
   if (core.endsWith("!")) { fixed = true; core = core.slice(0, -1); }
   if (/^[0-9]$/.test(core)) return { type: "number", value: parseInt(core, 10), movable: !fixed, x, y };
   if (core === "=") return { type: "symbol", value: "=", orientation: "horizontal", movable: !fixed, x, y };
   if (core === "|" || core === "‖") return { type: "symbol", value: "=", orientation: "vertical", movable: !fixed, x, y };
+  if (core === ":=") return { type: "symbol", value: ":=", movable: !fixed, x, y };
+  if (LETTER_SET.has(core)) return { type: "letter", value: core, movable: !fixed, x, y };
   if (SYMBOL_TOKEN_ALIASES[core]) return { type: "symbol", value: SYMBOL_TOKEN_ALIASES[core], movable: !fixed, x, y };
   return null;
 }
 
-function getRuns(width, height, grid, blocksById) {
+// 辺（壁・一方通行）は縦(v)・横(h)の2次元配列で持つ。
+//   edgesV[y][x] : マス(x,y)-(x+1,y) の間の辺。 "." "#" ">" "<"
+//   edgesH[y][x] : マス(x,y)-(x,y+1) の間の辺。 "." "#" "^" "v"
+function edgeVIsWall(edgesV, x, y) { return !!(edgesV[y] && edgesV[y][x] === "#"); }
+function edgeHIsWall(edgesH, x, y) { return !!(edgesH[y] && edgesH[y][x] === "#"); }
+
+function getRuns(width, height, grid, blocksById, edgesV, edgesH) {
   const runs = [];
   for (let y = 0; y < height; y++) {
     let run = [];
     for (let x = 0; x < width; x++) {
       const id = grid[y][x];
       const b = id ? blocksById[id] : null;
-      if (b && b.type !== "wall" && b.type !== "oneway") run.push(b);
-      else { if (run.length) runs.push({ dir: "h", blocks: run }); run = []; }
+      const wallBefore = x > 0 && edgeVIsWall(edgesV, x - 1, y);
+      if (!b || wallBefore) { if (run.length) runs.push({ dir: "h", blocks: run }); run = []; }
+      if (b) run.push(b);
     }
     if (run.length) runs.push({ dir: "h", blocks: run });
   }
@@ -430,8 +932,9 @@ function getRuns(width, height, grid, blocksById) {
     for (let y = 0; y < height; y++) {
       const id = grid[y][x];
       const b = id ? blocksById[id] : null;
-      if (b && b.type !== "wall" && b.type !== "oneway") run.push(b);
-      else { if (run.length) runs.push({ dir: "v", blocks: run }); run = []; }
+      const wallBefore = y > 0 && edgeHIsWall(edgesH, x, y - 1);
+      if (!b || wallBefore) { if (run.length) runs.push({ dir: "v", blocks: run }); run = []; }
+      if (b) run.push(b);
     }
     if (run.length) runs.push({ dir: "v", blocks: run });
   }
@@ -441,15 +944,20 @@ function runHasOrientedEquals(run) {
   const want = run.dir === "h" ? "horizontal" : "vertical";
   return run.blocks.some((b) => b.type === "symbol" && b.value === "=" && (b.orientation || "horizontal") === want);
 }
+function runHasAssignment(run) {
+  return run.blocks.some((b) => b.type === "symbol" && b.value === ":=");
+}
 function tokenizeRun(run) {
   const tokens = [];
   let numBuf = "";
   const flush = () => { if (numBuf !== "") { tokens.push({ t: "num", v: parseInt(numBuf, 10) }); numBuf = ""; } };
   for (const b of run.blocks) {
     if (b.type === "number") numBuf += String(b.value);
+    else if (b.type === "letter") { flush(); tokens.push({ t: "var", name: b.value }); }
     else {
       flush();
       if (b.value === "=") tokens.push({ t: "eq" });
+      else if (b.value === ":=") tokens.push({ t: "assign" });
       else if (b.value === "(") tokens.push({ t: "lparen" });
       else if (b.value === ")") tokens.push({ t: "rparen" });
       else tokens.push({ t: "op", v: OP_MAP[b.value] });
@@ -458,7 +966,11 @@ function tokenizeRun(run) {
   flush();
   return tokens;
 }
-function evalExpr(tokens) {
+// varValues: {変数名:数値}, funcs: {関数名:{paramName, rhs}} 。本体ゲームと同じ文法：
+// 文字の直後に "(" が続いたら関数呼び出しとして扱う。
+function evalExpr(tokens, varValues, funcs) {
+  const vars = varValues || {};
+  const fns = funcs || {};
   let pos = 0;
   const peek = () => tokens[pos];
   const next = () => tokens[pos++];
@@ -481,6 +993,20 @@ function evalExpr(tokens) {
     const tk = peek();
     if (!tk) throw new Error("unexpected end");
     if (tk.t === "num") { next(); return tk.v; }
+    if (tk.t === "var") {
+      next();
+      if (peek() && peek().t === "lparen") {
+        next();
+        const argValue = parseExpr();
+        const c = next();
+        if (!c || c.t !== "rparen") throw new Error("expected ) after function argument");
+        const fn = fns[tk.name];
+        if (!fn) throw new Error(`unresolved function ${tk.name}`);
+        return evalExpr(fn.rhs, { ...vars, [fn.paramName]: argValue }, fns);
+      }
+      if (!Object.prototype.hasOwnProperty.call(vars, tk.name)) throw new Error("unresolved var " + tk.name);
+      return vars[tk.name];
+    }
     if (tk.t === "lparen") { next(); const v = parseExpr(); const c = next(); if (!c || c.t !== "rparen") throw new Error(")"); return v; }
     throw new Error("unexpected token");
   }
@@ -489,20 +1015,272 @@ function evalExpr(tokens) {
   if (pos !== tokens.length) throw new Error("trailing");
   return result;
 }
-function checkRun(run) {
+function checkRun(run, varValues, funcs) {
   const tokens = tokenizeRun(run);
   const segments = [[]];
   for (const tk of tokens) { if (tk.t === "eq") segments.push([]); else segments[segments.length - 1].push(tk); }
   if (segments.length < 2) return false;
   try {
-    const values = segments.map((s) => evalExpr(s));
+    const values = segments.map((s) => evalExpr(s, varValues, funcs));
     return values.every((v) => Math.abs(v - values[0]) <= 1e-9);
   } catch (e) { return false; }
 }
-function checkWin(width, height, grid, blocksById) {
-  const runs = getRuns(width, height, grid, blocksById).filter(runHasOrientedEquals);
+
+// runが「代入 or 関数定義として成立する形」かどうかを判定する（本体ゲームと同じ）。
+//   変数代入: [変数] := [右辺の式]                 例: x := 5
+//   関数定義: [関数名] ( [入力変数] ) := [右辺の式]  例: f(x) := x+2
+function classifyAssignmentShape(run) {
+  const tokens = tokenizeRun(run);
+  if (
+    tokens.length >= 6 &&
+    tokens[0].t === "var" && tokens[1].t === "lparen" && tokens[2].t === "var" &&
+    tokens[3].t === "rparen" && tokens[4].t === "assign"
+  ) {
+    const rhs = tokens.slice(5);
+    if (rhs.length > 0 && !rhs.some((t) => t.t === "assign" || t.t === "eq")) {
+      return { kind: "function", funcName: tokens[0].name, paramName: tokens[2].name, rhs };
+    }
+    return null;
+  }
+  if (tokens.length >= 2 && tokens[0].t === "var" && tokens[1].t === "assign") {
+    const rhs = tokens.slice(2);
+    if (rhs.length > 0 && !rhs.some((t) => t.t === "assign" || t.t === "eq")) {
+      return { kind: "variable", varName: tokens[0].name, rhs };
+    }
+    return null;
+  }
+  return null;
+}
+function assignmentShape(run) {
+  const shape = classifyAssignmentShape(run);
+  return shape && shape.kind === "variable" ? { varName: shape.varName, rhs: shape.rhs } : null;
+}
+
+// 盤面上の全ての代入(:=)・関数定義候補を集め、固定点反復で変数・関数の両方を解決する（本体ゲームと同じ）
+function resolveVariables(width, height, grid, blocksById, edgesV, edgesH) {
+  const assignRuns = getRuns(width, height, grid, blocksById, edgesV, edgesH).filter(runHasAssignment);
+  const varCandidates = [];
+  const funcCandidates = [];
+  for (const run of assignRuns) {
+    const shape = classifyAssignmentShape(run);
+    if (!shape) continue;
+    if (shape.kind === "function") funcCandidates.push({ run, shape });
+    else varCandidates.push({ run, shape });
+  }
+
+  const nameCounts = new Map();
+  for (const c of varCandidates) nameCounts.set(c.shape.varName, (nameCounts.get(c.shape.varName) || 0) + 1);
+  const conflictedNames = new Set([...nameCounts.entries()].filter(([, n]) => n > 1).map(([name]) => name));
+
+  const funcNameCounts = new Map();
+  for (const c of funcCandidates) funcNameCounts.set(c.shape.funcName, (funcNameCounts.get(c.shape.funcName) || 0) + 1);
+  const conflictedFuncNames = new Set([...funcNameCounts.entries()].filter(([, n]) => n > 1).map(([name]) => name));
+
+  const varValues = {};
+  const funcs = {};
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const c of varCandidates) {
+      if (conflictedNames.has(c.shape.varName)) continue;
+      if (Object.prototype.hasOwnProperty.call(varValues, c.shape.varName)) continue;
+      try {
+        varValues[c.shape.varName] = evalExpr(c.shape.rhs, varValues, funcs);
+        changed = true;
+      } catch (e) { /* 次の周回で再挑戦 */ }
+    }
+    for (const c of funcCandidates) {
+      if (conflictedFuncNames.has(c.shape.funcName)) continue;
+      if (Object.prototype.hasOwnProperty.call(funcs, c.shape.funcName)) continue;
+      if (Object.prototype.hasOwnProperty.call(varValues, c.shape.paramName)) continue; // 入力変数は未定義である必要がある
+      try {
+        evalExpr(c.shape.rhs, { ...varValues, [c.shape.paramName]: 1 }, funcs);
+        funcs[c.shape.funcName] = { paramName: c.shape.paramName, rhs: c.shape.rhs };
+        changed = true;
+      } catch (e) { /* 次の周回で再挑戦 */ }
+    }
+  }
+
+  const satisfiedVarRunIds = new Set();
+  for (const c of varCandidates) {
+    if (conflictedNames.has(c.shape.varName)) continue;
+    if (Object.prototype.hasOwnProperty.call(varValues, c.shape.varName)) satisfiedVarRunIds.add(c.run);
+  }
+  const satisfiedFuncRunIds = new Set();
+  for (const c of funcCandidates) {
+    if (conflictedFuncNames.has(c.shape.funcName)) continue;
+    if (Object.prototype.hasOwnProperty.call(funcs, c.shape.funcName)) satisfiedFuncRunIds.add(c.run);
+  }
+
+  return {
+    varValues, funcs, varCandidates, funcCandidates,
+    satisfiedVarRunIds, satisfiedFuncRunIds, nameCounts, funcNameCounts,
+    candidates: varCandidates, satisfiedRunIds: satisfiedVarRunIds, // 後方互換
+  };
+}
+
+function checkWin(width, height, grid, blocksById, edgesV, edgesH) {
+  const { varValues, funcs } = resolveVariables(width, height, grid, blocksById, edgesV, edgesH);
+  const runs = getRuns(width, height, grid, blocksById, edgesV, edgesH).filter(runHasOrientedEquals);
   if (runs.length === 0) return { win: false, hasEquals: false };
-  return { win: runs.every(checkRun), hasEquals: true };
+  return { win: runs.every((r) => checkRun(r, varValues, funcs)), hasEquals: true };
+}
+
+// 現在成立している等式・代入・関数定義のrunを抜き出す（緑/紫の枠に使う）
+function getSatisfiedRuns(width, height, grid, blocksById, edgesV, edgesH) {
+  const { varValues, funcs } = resolveVariables(width, height, grid, blocksById, edgesV, edgesH);
+  return getRuns(width, height, grid, blocksById, edgesV, edgesH).filter(
+    (r) => runHasOrientedEquals(r) && checkRun(r, varValues, funcs) === true
+  );
+}
+function getSatisfiedAssignmentRuns(width, height, grid, blocksById, edgesV, edgesH) {
+  const { varCandidates, satisfiedVarRunIds, funcCandidates, satisfiedFuncRunIds } =
+    resolveVariables(width, height, grid, blocksById, edgesV, edgesH);
+  const varRuns = varCandidates.filter((c) => satisfiedVarRunIds.has(c.run)).map((c) => c.run);
+  const funcRuns = funcCandidates.filter((c) => satisfiedFuncRunIds.has(c.run)).map((c) => c.run);
+  return [...varRuns, ...funcRuns];
+}
+
+// runの中で使われているvarトークンを「関数呼び出し」か「普通の変数参照」かに分けて、未解決なものを抜き出す
+function findUnresolvedRefs(tokens, varValues, funcs, boundName) {
+  const missingVars = new Set();
+  const missingFuncs = new Set();
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.t !== "var") continue;
+    const isCall = tokens[i + 1] && tokens[i + 1].t === "lparen";
+    if (isCall) {
+      if (!Object.prototype.hasOwnProperty.call(funcs, t.name)) missingFuncs.add(t.name);
+    } else {
+      if (t.name === boundName) continue;
+      if (!Object.prototype.hasOwnProperty.call(varValues, t.name)) missingVars.add(t.name);
+    }
+  }
+  return { missingVars: [...missingVars], missingFuncs: [...missingFuncs] };
+}
+
+// 失敗している代入・関数定義(run)について、「なぜ成立していないか」を説明する文を返す（本体ゲームと同じ）
+function explainFailureForCandidate(cand, varValues, funcs, nameCounts, funcNameCounts) {
+  if (cand.shape.kind === "function") {
+    const name = cand.shape.funcName;
+    const count = funcNameCounts.get(name) || 0;
+    if (count > 1) return `関数「${name}」の定義が${count}個あります（1つにしてください）`;
+    if (Object.prototype.hasOwnProperty.call(varValues, cand.shape.paramName)) {
+      return `入力変数「${cand.shape.paramName}」はすでに変数として使われています（別の文字にしてください）`;
+    }
+    const { missingVars, missingFuncs } = findUnresolvedRefs(cand.shape.rhs, varValues, funcs, cand.shape.paramName);
+    if (missingVars.length > 0) return `右辺の「${missingVars.join("」「")}」が未解決です`;
+    if (missingFuncs.length > 0) return `右辺の関数「${missingFuncs.join("」「")}」が未定義です`;
+    return "右辺の式が計算できません";
+  }
+  const name = cand.shape.varName;
+  const count = nameCounts.get(name) || 0;
+  if (count > 1) return `「${name}」への代入が${count}個あります（1つにしてください）`;
+  const { missingVars, missingFuncs } = findUnresolvedRefs(cand.shape.rhs, varValues, funcs, null);
+  if (missingVars.length > 0) return `右辺の「${missingVars.join("」「")}」が未解決です`;
+  if (missingFuncs.length > 0) return `右辺の関数「${missingFuncs.join("」「")}」が未定義です`;
+  return "右辺の式が計算できません";
+}
+
+// 完成しているのに成立していない代入・関数定義のrunを抜き出す（×印に使う）
+function getFailedAssignmentRuns(width, height, grid, blocksById, edgesV, edgesH) {
+  const { varCandidates, satisfiedVarRunIds, funcCandidates, satisfiedFuncRunIds } =
+    resolveVariables(width, height, grid, blocksById, edgesV, edgesH);
+  const varRuns = varCandidates.filter((c) => !satisfiedVarRunIds.has(c.run)).map((c) => c.run);
+  const funcRuns = funcCandidates.filter((c) => !satisfiedFuncRunIds.has(c.run)).map((c) => c.run);
+  return [...varRuns, ...funcRuns];
+}
+
+/* ---------- 移動モード：ゲームと同じBFS移動（辺の壁・一方通行を考慮） ---------- */
+const MOVE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+// 壁・一方通行「だけ」を見る（マスの中身は見ない）。編集モードの盤面(state.cells)と
+// お試しプレイ中の盤面(playState.grid)とで「今どこが空いているか」が違うので、
+// 空きマスかどうかの判定は呼び出し側でそれぞれ正しいデータを見て行うこと。
+function isEdgePassable(cx, cy, nx, ny, dx, dy) {
+  if (dx === 1) {
+    const t = state.edgesV[cy][cx];
+    if (t === "#" || t === "<") return false;
+  } else if (dx === -1) {
+    const t = state.edgesV[cy][nx];
+    if (t === "#" || t === ">") return false;
+  } else if (dy === 1) {
+    const t = state.edgesH[cy][cx];
+    if (t === "#" || t === "^") return false;
+  } else if (dy === -1) {
+    const t = state.edgesH[ny][cx];
+    if (t === "#" || t === "v") return false;
+  }
+  return true;
+}
+
+// 編集モードの「移動」ツール用：壁・一方通行に加えて、編集中のマスの中身(state.cells)が
+// 空きかどうかも見る。
+function isMovePassable(cx, cy, nx, ny, dx, dy) {
+  if (!isEdgePassable(cx, cy, nx, ny, dx, dy)) return false;
+  const cell = state.cells[ny][nx];
+  return cell === "." || cell === "" || cell == null;
+}
+
+function computeMoveReachable(startX, startY) {
+  const visited = new Map();
+  const startKey = `${startX},${startY}`;
+  visited.set(startKey, null);
+  const queue = [[startX, startY]];
+  while (queue.length) {
+    const [cx, cy] = queue.shift();
+    for (const [dx, dy] of MOVE_DIRS) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= state.width || ny >= state.height) continue;
+      const key = `${nx},${ny}`;
+      if (visited.has(key)) continue;
+      if (!isMovePassable(cx, cy, nx, ny, dx, dy)) continue;
+      visited.set(key, `${cx},${cy}`);
+      queue.push([nx, ny]);
+    }
+  }
+  visited.delete(startKey);
+  return visited;
+}
+
+function isOccupiedCell(x, y) {
+  const t = state.cells[y] && state.cells[y][x];
+  return t != null && t !== "." && t !== "";
+}
+
+function selectForMove(x, y) {
+  moveSelected = { x, y };
+  moveReachable = computeMoveReachable(x, y);
+  renderGrid();
+}
+
+function clearMoveSelection() {
+  moveSelected = null;
+  moveReachable = new Map();
+  renderGrid();
+}
+
+function handleMoveModeClick(x, y) {
+  if (moveSelected) {
+    if (moveSelected.x === x && moveSelected.y === y) {
+      clearMoveSelection(); // 選択中のマスをもう一度クリック→選択解除
+      return;
+    }
+    const key = `${x},${y}`;
+    if (moveReachable.has(key)) {
+      const token = state.cells[moveSelected.y][moveSelected.x];
+      state.cells[moveSelected.y][moveSelected.x] = ".";
+      state.cells[y][x] = token;
+      clearMoveSelection();
+      return;
+    }
+    // ハイライト外をクリック：別のブロックなら選び直し、空マスなら選択解除
+    if (isOccupiedCell(x, y)) selectForMove(x, y);
+    else clearMoveSelection();
+    return;
+  }
+  if (isOccupiedCell(x, y)) selectForMove(x, y);
 }
 
 /* ========================================================
@@ -511,11 +1289,19 @@ function checkWin(width, height, grid, blocksById) {
 const state = {
   width: 9,
   height: 7,
-  cells: [], // cells[y][x] = トークン文字列 ("." "#" "3" "3!" "+!" ...)
+  cells: [],  // cells[y][x] = トークン文字列 ("." "3" "3!" "+!" ...)
+  edgesV: [], // edgesV[y][x] = マス(x,y)-(x+1,y)間の辺。 "." "#" ">" "<"
+  edgesH: [], // edgesH[y][x] = マス(x,y)-(x,y+1)間の辺。 "." "#" "^" "v"
 };
 
 function makeEmptyGrid(w, h, fill) {
   return Array.from({ length: h }, () => new Array(w).fill(fill || "."));
+}
+function makeEmptyEdgesV(w, h) {
+  return Array.from({ length: h }, () => new Array(Math.max(0, w - 1)).fill("."));
+}
+function makeEmptyEdgesH(w, h) {
+  return Array.from({ length: Math.max(0, h - 1) }, () => new Array(w).fill("."));
 }
 
 function resizeGrid(newW, newH) {
@@ -525,128 +1311,230 @@ function resizeGrid(newW, newH) {
       next[y][x] = state.cells[y][x];
     }
   }
+  const nextV = makeEmptyEdgesV(newW, newH);
+  for (let y = 0; y < Math.min(newH, state.height); y++) {
+    for (let x = 0; x < Math.min(Math.max(0, newW - 1), Math.max(0, state.width - 1)); x++) {
+      nextV[y][x] = state.edgesV[y][x];
+    }
+  }
+  const nextH = makeEmptyEdgesH(newW, newH);
+  for (let y = 0; y < Math.min(Math.max(0, newH - 1), Math.max(0, state.height - 1)); y++) {
+    for (let x = 0; x < Math.min(newW, state.width); x++) {
+      nextH[y][x] = state.edgesH[y][x];
+    }
+  }
   state.width = newW;
   state.height = newH;
   state.cells = next;
+  state.edgesV = nextV;
+  state.edgesH = nextH;
 }
 
-/* ---- 道具（パレット） ---- */
-let currentTool = { kind: "wall" }; // {kind:'empty'|'wall'} | {kind:'number', value} | {kind:'symbol', value}
-let fixedMode = false;
+/* ---- 道具（パレット） ----
+   すべての道具（空き・移動・固定切替・数字・文字・記号・壁・一方通行）を
+   1つの currentTool にまとめる。選択状態もパレット全体で1つだけ。 */
+let currentTool = { kind: "empty" };
+// 移動モード用の選択状態（ゲームと同じ、辺の壁・一方通行を考慮したBFS移動）
+let moveSelected = null; // {x,y} | null
+let moveReachable = new Map(); // "x,y" -> parentKey
 
-function toolToToken(tool, fixed) {
+function toolToToken(tool) {
   if (tool.kind === "empty") return ".";
-  if (tool.kind === "wall") return "#";
-  if (tool.kind === "oneway") return tool.token; // 常に固定扱い（!は付けない、そもそも動かせない）
-  if (tool.kind === "number") return fixed ? `${tool.value}!` : `${tool.value}`;
-  if (tool.kind === "symbol") return fixed ? `${tool.value}!` : `${tool.value}`;
+  if (tool.kind === "number") return `${tool.value}`;
+  if (tool.kind === "letter") return `${tool.value}`;
+  if (tool.kind === "symbol") return `${tool.value}`;
   return ".";
 }
 
-function buildPalette() {
-  const basic = document.getElementById("palette-basic");
-  const digits = document.getElementById("palette-digits");
-  const symbols = document.getElementById("palette-symbols");
+/* 下部固定ツールバー：カテゴリ（数字／文字／記号／辺）をタップすると、
+   その上に詳細（具体的な値）が開く2段階選択。空・移動・固定は選択肢が1つしかないので
+   カテゴリボタン自体が直接そのまま道具になる（サブパネルは開かない）。 */
+const TOOLBAR_CATEGORIES = [
+  { id: "empty", label: "空", direct: { kind: "empty" } },
+  { id: "move", label: "移動", direct: { kind: "move" } },
+  { id: "fixed", label: "固定", direct: { kind: "fixedToggle" } },
+  {
+    id: "number", label: "数字",
+    options: () => Array.from({ length: 10 }, (_, d) => ({ label: String(d), kind: "number", tool: { kind: "number", value: d } })),
+  },
+  {
+    id: "letter", label: "文字",
+    options: () =>
+      ["a", "b", "c", "d", "x", "y", "z", "f", "g", "h"].map((ch) => ({ label: ch, kind: "letter", tool: { kind: "letter", value: ch } })),
+  },
+  {
+    id: "symbol", label: "記号",
+    options: () =>
+      [["+", "+"], ["-", "-"], ["×", "*"], ["÷", "/"], ["(", "("], [")", ")"], ["=", "="], ["‖", "|"], ["\u{2254}", ":="]].map(
+        ([label, value]) => ({ label, kind: "symbol", tool: { kind: "symbol", value } })
+      ),
+  },
+  {
+    id: "edge", label: "辺",
+    options: () => [
+      { label: "壁", kind: "wall", tool: { kind: "wall" } },
+      { label: "→", kind: "edge-oneway", tool: { kind: "oneway", label: "→", token: ">", axis: "v" } },
+      { label: "←", kind: "edge-oneway", tool: { kind: "oneway", label: "←", token: "<", axis: "v" } },
+      { label: "↑", kind: "edge-oneway", tool: { kind: "oneway", label: "↑", token: "^", axis: "h" } },
+      { label: "↓", kind: "edge-oneway", tool: { kind: "oneway", label: "↓", token: "v", axis: "h" } },
+    ],
+  },
+];
 
-  const makeBtn = (label, kind, tool, extraStyle) => {
-    const btn = document.createElement("button");
-    btn.className = "tool-btn";
-    btn.type = "button";
-    btn.dataset.kind = kind;
-    btn.textContent = label;
-    if (extraStyle) Object.assign(btn.style, extraStyle);
-    btn.addEventListener("click", () => {
-      currentTool = tool;
-      document.querySelectorAll(".tool-btn.selected").forEach((b) => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      updateToolPreview();
-    });
-    return btn;
-  };
+let activeCategoryId = null;
 
-  basic.appendChild(makeBtn("空", "empty", { kind: "empty" }));
-  const wallBtn = makeBtn("壁", "wall", { kind: "wall" });
-  basic.appendChild(wallBtn);
-  wallBtn.classList.add("selected");
+function selectTool(tool, btnEl) {
+  currentTool = tool;
+  document.querySelectorAll(".tool-btn.selected, .toolbar-cat-btn.selected").forEach((b) => b.classList.remove("selected"));
+  if (btnEl) btnEl.classList.add("selected");
+  updateToolPreview();
+}
 
-  const onewayDefs = [
-    ["▶", "right", ">"], ["◀", "left", "<"], ["▲", "up", "^"], ["▼", "down", "v"],
-  ];
-  for (const [label, direction, token] of onewayDefs) {
-    basic.appendChild(makeBtn(label, "oneway", { kind: "oneway", direction, token }));
+function closeToolbarSubpanel() {
+  activeCategoryId = null;
+  document.querySelectorAll(".toolbar-cat-btn.cat-active").forEach((b) => b.classList.remove("cat-active"));
+  const sub = document.getElementById("toolbar-subpanel");
+  sub.hidden = true;
+  sub.innerHTML = "";
+}
+
+function openToolbarSubpanel(cat, catBtn) {
+  if (activeCategoryId === cat.id) {
+    closeToolbarSubpanel();
+    return;
   }
+  activeCategoryId = cat.id;
+  document.querySelectorAll(".toolbar-cat-btn.cat-active").forEach((b) => b.classList.remove("cat-active"));
+  catBtn.classList.add("cat-active");
 
-  for (let d = 0; d <= 9; d++) {
-    digits.appendChild(makeBtn(String(d), "number", { kind: "number", value: d }));
-  }
-
-  const symDefs = [
-    ["+", "+"], ["-", "-"], ["×", "x"], ["÷", "/"], ["(", "("], [")", ")"], ["=", "="], ["‖", "|"],
-  ];
-  for (const [label, value] of symDefs) {
-    symbols.appendChild(makeBtn(label, "symbol", { kind: "symbol", value }));
+  const sub = document.getElementById("toolbar-subpanel");
+  sub.innerHTML = "";
+  sub.hidden = false;
+  for (const opt of cat.options()) {
+    const b = document.createElement("button");
+    b.className = "tool-btn";
+    b.type = "button";
+    b.dataset.kind = opt.kind;
+    b.textContent = opt.label;
+    b.addEventListener("click", () => selectTool(opt.tool, b));
+    sub.appendChild(b);
   }
 }
 
+function buildBottomToolbar() {
+  const catRow = document.getElementById("toolbar-categories");
+  catRow.innerHTML = "";
+
+  let defaultBtn = null;
+  for (const cat of TOOLBAR_CATEGORIES) {
+    const btn = document.createElement("button");
+    btn.className = "toolbar-cat-btn";
+    btn.type = "button";
+    btn.textContent = cat.direct ? cat.label : `${cat.label} ▾`;
+    btn.addEventListener("click", () => {
+      if (cat.direct) {
+        closeToolbarSubpanel();
+        selectTool(cat.direct, btn);
+      } else {
+        openToolbarSubpanel(cat, btn);
+      }
+    });
+    catRow.appendChild(btn);
+    if (cat.id === "empty") defaultBtn = btn;
+  }
+  if (defaultBtn) selectTool({ kind: "empty" }, defaultBtn);
+}
+
 function toolLabel(tool) {
-  if (tool.kind === "empty") return "空きマス";
-  if (tool.kind === "wall") return "壁";
-  if (tool.kind === "oneway") return `一方通行（${{ right: "→", left: "←", up: "↑", down: "↓" }[tool.direction]}向き）`;
+  if (tool.kind === "empty") return "空き（消しゴム。マス・辺どちらにも使える）";
+  if (tool.kind === "move") return "移動モード（ブロックをクリックで選択→移動先のマスをクリック）";
+  if (tool.kind === "fixedToggle") return "固定切り替えモード（ブロックをクリックするたびに固定⇔動かせる、が切り替わる）";
   if (tool.kind === "number") return `数字「${tool.value}」`;
+  if (tool.kind === "letter") return `文字（変数）「${tool.value}」`;
   if (tool.kind === "symbol") return `記号「${tool.value}」`;
+  if (tool.kind === "wall") return "壁（辺に置く。両方向とも通れない）";
+  if (tool.kind === "oneway") return `一方通行（辺に置く。${tool.label}向きにだけ通れる）`;
   return "";
 }
 
 function updateToolPreview() {
   const swatch = document.getElementById("tool-swatch");
   const label = document.getElementById("tool-label");
-  label.textContent = toolLabel(currentTool) + (fixedMode && (currentTool.kind === "number" || currentTool.kind === "symbol") ? "（固定）" : "");
+  label.textContent = toolLabel(currentTool);
   swatch.className = "swatch";
   swatch.textContent = "";
-  if (currentTool.kind === "empty") { swatch.style.background = "var(--paper)"; swatch.style.color = "#33475a"; }
-  else if (currentTool.kind === "wall") { swatch.style.background = "var(--wall-fill)"; swatch.style.border = "2px solid var(--wall-edge)"; }
-  else if (currentTool.kind === "oneway") {
-    swatch.style.background = "#142230";
-    swatch.style.border = "2px solid rgba(87,199,212,0.45)";
-    swatch.style.color = "var(--oneway)";
-    swatch.textContent = { right: "▶", left: "◀", up: "▲", down: "▼" }[currentTool.direction];
-  }
-  else if (currentTool.kind === "number") {
+  swatch.style.border = "none";
+  swatch.style.fontStyle = "normal";
+  swatch.style.fontFamily = "";
+
+  if (currentTool.kind === "empty") {
+    swatch.style.background = "var(--paper)"; swatch.style.color = "#33475a"; swatch.textContent = "—";
+  } else if (currentTool.kind === "move") {
+    swatch.style.background = "var(--ink-950)";
+    swatch.style.border = "2px solid var(--accent)";
+    swatch.style.color = "var(--accent)";
+    swatch.textContent = "⇄";
+  } else if (currentTool.kind === "fixedToggle") {
+    swatch.style.background = "var(--ink-950)";
+    swatch.style.border = "2px solid var(--fixed-edge)";
+    swatch.style.color = "var(--fixed-edge)";
+    swatch.textContent = "🔒";
+  } else if (currentTool.kind === "number") {
     swatch.style.background = "var(--number-fill)"; swatch.style.color = "var(--number-text)";
-    swatch.style.border = fixedMode ? "2px solid var(--fixed-edge)" : "none";
+    swatch.textContent = currentTool.value;
+  } else if (currentTool.kind === "letter") {
+    swatch.style.background = "var(--letter-fill)"; swatch.style.color = "var(--letter-text)";
     swatch.textContent = currentTool.value;
   } else if (currentTool.kind === "symbol") {
     swatch.style.background = "var(--symbol-fill)"; swatch.style.color = "var(--symbol-text)";
-    swatch.style.border = fixedMode ? "2px solid var(--fixed-edge)" : "none";
-    swatch.textContent = currentTool.value;
+    swatch.textContent = symbolGlyph(currentTool.value);
+  } else if (currentTool.kind === "wall") {
+    swatch.style.background = "var(--ink-950)";
+    swatch.style.border = "2px solid var(--wall-edge)";
+    swatch.style.color = "var(--wall-edge)";
+    swatch.textContent = "壁";
+  } else if (currentTool.kind === "oneway") {
+    swatch.style.background = "#142230";
+    swatch.style.border = "2px solid rgba(87,199,212,0.45)";
+    swatch.style.color = "var(--oneway)";
+    swatch.textContent = currentTool.label;
   }
+}
+
+/* ---- 盤面のセルサイズを、盤面のマス数と表示できる余白に合わせて自動調整する（本体ゲームと同じ考え方） ---- */
+function updateCellSize() {
+  const wrapEl = document.getElementById("grid-wrap");
+  const w = playState ? playState.width : state.width;
+  const h = playState ? playState.height : state.height;
+
+  const PREFERRED_SIZE = 72; // 基本はこの大きさを使う（一定値）。画面に余裕がある限り縮めない。
+  const MIN_SIZE = 16; // 画面が狭くてもこれより小さくはしない下限（それでも収まらない時は#grid-wrapのスクロールに任せる）
+
+  const wrapWidth = wrapEl.clientWidth || document.documentElement.clientWidth || window.innerWidth || 640;
+  const availableWidth = Math.max(120, wrapWidth - 8);
+
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+  const wrapTop = wrapEl.getBoundingClientRect ? wrapEl.getBoundingClientRect().top : 120;
+  const reservedBelow = 50; // ステータス行などの分をおおまかに差し引く
+  const availableHeight = Math.max(120, viewportHeight - wrapTop - reservedBelow);
+
+  const sizeByWidth = Math.floor(availableWidth / Math.max(1, w));
+  const sizeByHeight = Math.floor(availableHeight / Math.max(1, h));
+
+  // 基本はPREFERRED_SIZEで固定。画面からはみ出る場合だけ、はみ出ない大きさまで縮める。
+  const size = Math.max(MIN_SIZE, Math.min(PREFERRED_SIZE, sizeByWidth, sizeByHeight));
+
+  document.documentElement.style.setProperty("--cell-size", `${size}px`);
 }
 
 /* ---- 盤面の描画 ---- */
-function computeWallEdgesFromCells() {
-  const edges = {};
-  const isWall = (x, y) => {
-    if (x < 0 || y < 0 || x >= state.width || y >= state.height) return false;
-    return state.cells[y][x] === "#";
-  };
-  for (let y = 0; y < state.height; y++) {
-    for (let x = 0; x < state.width; x++) {
-      if (state.cells[y][x] !== "#") continue;
-      edges[`${x},${y}`] = {
-        t: !isWall(x, y - 1), r: !isWall(x + 1, y), b: !isWall(x, y + 1), l: !isWall(x - 1, y),
-      };
-    }
-  }
-  return edges;
-}
-
 function renderGrid() {
+  if (playState) { renderPlayGrid(); return; }
+  updateCellSize();
   const gridEl = document.getElementById("grid");
   gridEl.innerHTML = "";
   gridEl.style.width = `calc(var(--cell-size) * ${state.width})`;
   gridEl.style.height = `calc(var(--cell-size) * ${state.height})`;
-
-  const wallEdges = computeWallEdgesFromCells();
 
   for (let y = 0; y < state.height; y++) {
     for (let x = 0; x < state.width; x++) {
@@ -659,105 +1547,759 @@ function renderGrid() {
 
       cellEl.addEventListener("mousedown", (ev) => {
         ev.preventDefault();
-        if (ev.button === 2) applyToolAt(x, y, true);
-        else { isPainting = true; applyToolAt(x, y, false); }
+        if (ev.button === 2) {
+          eraseCellAt(x, y);
+          return;
+        }
+        if (currentTool.kind === "move") { handleMoveModeClick(x, y); return; }
+        if (currentTool.kind === "fixedToggle") { toggleFixedAt(x, y); return; }
+        if (currentTool.kind === "wall" || currentTool.kind === "oneway") return; // 辺専用の道具はマスには効かない
+        isPainting = true;
+        paintCellAt(x, y);
       });
-      cellEl.addEventListener("mouseenter", () => { if (isPainting) applyToolAt(x, y, false); });
+      cellEl.addEventListener("mouseenter", () => {
+        if (!isPainting) return;
+        if (currentTool.kind === "move" || currentTool.kind === "fixedToggle") return;
+        if (currentTool.kind === "wall" || currentTool.kind === "oneway") return;
+        paintCellAt(x, y);
+      });
       cellEl.addEventListener("contextmenu", (ev) => ev.preventDefault());
 
       gridEl.appendChild(cellEl);
 
       const token = state.cells[y][x];
       const block = parseCellToken(token, x, y);
-      if (block) gridEl.appendChild(renderBlockPreview(block, wallEdges));
+      if (block) {
+        const blockEl = renderBlockPreview(block);
+        if (moveSelected && moveSelected.x === x && moveSelected.y === y) {
+          blockEl.classList.add("move-selected");
+        }
+        gridEl.appendChild(blockEl);
+      }
     }
   }
+
+  renderEdgeVisuals(gridEl);
+  renderEdgeHitzones(gridEl);
+  renderMoveHighlights(gridEl);
+
   updateJsonOutput();
   updateStatus();
 }
 
-function renderBlockPreview(block, wallEdges) {
+// 移動モードで選択中のブロックが移動できるマスを、薄いハイライトとして表示する
+function renderMoveHighlights(gridEl) {
+  for (const key of moveReachable.keys()) {
+    const [x, y] = key.split(",").map(Number);
+    const hl = document.createElement("div");
+    hl.className = "move-reachable-cell";
+    hl.style.left = `calc(var(--cell-size) * ${x})`;
+    hl.style.top = `calc(var(--cell-size) * ${y})`;
+    hl.style.width = "var(--cell-size)";
+    hl.style.height = "var(--cell-size)";
+    gridEl.appendChild(hl);
+  }
+}
+
+/* ========================================================
+   お試しプレイ：本体ゲームと同じ「クリックで選択→ハイライトされたマスを
+   クリックで移動」を、今編集中の盤面（保存前の状態も含む）でそのまま試せる。
+   壁・一方通行はプレイ中に変わらないので、辺の情報は state.edgesV/edgesH を
+   そのまま読む。ブロックの位置だけ、編集用のstateとは別に playState で持つ
+   （プレイ中にうっかり編集データを壊さないように）。
+   ======================================================== */
+let playState = null; // null のときは編集モード
+
+// #grid-wrap を「元いた場所」に戻せるよう、あらかじめ場所を覚えておく
+let gridWrapHomeParent = null;
+let gridWrapHomeNext = null;
+
+function rememberHomePositions() {
+  const gridWrap = document.getElementById("grid-wrap");
+  gridWrapHomeParent = gridWrap.parentElement;
+  gridWrapHomeNext = gridWrap.nextElementSibling;
+}
+
+function buildFreshPlayState() {
+  const { blocksById, grid, unknown } = buildBlocksFromCells();
+  return { blocksById, grid, unknown, selectedId: null, reachable: new Map(), history: [], animating: false };
+}
+
+function enterPlayMode() {
+  const fresh = buildFreshPlayState();
+  if (fresh.unknown > 0) {
+    alert("認識できないマスがあるため、プレイできません。JSONやマスの内容を確認してください。");
+    return;
+  }
+  playState = { width: state.width, height: state.height, ...fresh };
+
+  // 盤面（#grid-wrap）を、別ウィンドウ風のモーダルの中に移動する
+  const modal = document.getElementById("play-modal");
+  const slot = document.getElementById("play-modal-grid-slot");
+  slot.appendChild(document.getElementById("grid-wrap"));
+  document.getElementById("play-clear-overlay").hidden = true;
+
+  // ヒント文（本体ゲームと同じく、常に表示。空なら非表示にする）
+  const hintText = document.getElementById("meta-hint").value.trim();
+  const hintEl = document.getElementById("play-modal-hint");
+  hintEl.textContent = hintText;
+  hintEl.hidden = !hintText;
+
+  modal.hidden = false;
+  updatePlayUndoButton();
+  renderGrid();
+}
+
+function exitPlayMode() {
+  playState = null;
+  document.getElementById("play-modal").hidden = true;
+  document.getElementById("play-clear-overlay").hidden = true;
+  // 盤面を、元あった場所（編集画面の中）に戻す
+  gridWrapHomeParent.insertBefore(document.getElementById("grid-wrap"), gridWrapHomeNext);
+  renderGrid();
+}
+
+function togglePlayMode() {
+  if (playState) exitPlayMode();
+  else enterPlayMode();
+}
+
+// お試しプレイ中の「ひとつ戻す」：直前の移動を取り消す（本体ゲームのundoと同じ考え方）
+function undoPlayMove() {
+  if (!playState || playState.animating || !playState.history.length) return;
+  const move = playState.history.pop();
+  if (!playState.history.length) updatePlayUndoButton();
+  const block = playState.blocksById[move.blockId];
+  playState.grid[move.to.y][move.to.x] = null;
+  playState.grid[move.from.y][move.from.x] = move.blockId;
+  block.x = move.from.x;
+  block.y = move.from.y;
+  playState.selectedId = null;
+  playState.reachable = new Map();
+  updatePlayUndoButton();
+  renderPlaySelectionVisual();
+  renderPlayHighlights();
+
+  // 移動と同じ経路を逆向きにたどってアニメーションさせる（本体ゲームのundoと同じ。
+  // 本体ゲームのundoはクリア判定を行わないので、ここでも行わない）。
+  const forwardFull = [move.from, ...(move.path || [])];
+  const backwardPath = [...forwardFull].reverse().slice(1);
+  animatePlayMove(move.blockId, backwardPath).then(() => {
+    renderPlayGlows();
+    renderPlayBadges();
+  });
+}
+
+// お試しプレイ中の「最初から」：今のプレイ内容を破棄して、編集中の盤面から改めて配置し直す
+function resetPlayMode() {
+  if (!playState) return;
+  const fresh = buildFreshPlayState();
+  playState = { width: state.width, height: state.height, ...fresh };
+  updatePlayUndoButton();
+  renderGrid();
+}
+
+function updatePlayUndoButton() {
+  const btn = document.getElementById("btn-play-undo");
+  if (btn) btn.disabled = !playState || playState.history.length === 0;
+}
+
+function isPlayOccupied(x, y) {
+  return !!(playState.grid[y] && playState.grid[y][x] != null);
+}
+
+function playComputeReachable(startX, startY) {
+  const visited = new Map();
+  const startKey = `${startX},${startY}`;
+  visited.set(startKey, null);
+  const queue = [[startX, startY]];
+  while (queue.length) {
+    const [cx, cy] = queue.shift();
+    for (const [dx, dy] of MOVE_DIRS) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= playState.width || ny >= playState.height) continue;
+      const key = `${nx},${ny}`;
+      if (visited.has(key)) continue;
+      if (!isEdgePassable(cx, cy, nx, ny, dx, dy)) continue; // 壁・一方通行は編集時と共通のstateから判定
+      if (isPlayOccupied(nx, ny)) continue; // 空きマスかどうかは、お試しプレイ中の盤面(playState.grid)で判定する
+      visited.set(key, `${cx},${cy}`);
+      queue.push([nx, ny]);
+    }
+  }
+  visited.delete(startKey);
+  return visited;
+}
+
+// 選択中のマスから目的地までの実際の経路を、幅優先探索の親情報から復元する（本体ゲームと同じ）
+function reconstructPlayPath(parentMap, targetX, targetY) {
+  const path = [];
+  let key = `${targetX},${targetY}`;
+  while (key != null) {
+    const [x, y] = key.split(",").map(Number);
+    path.push({ x, y });
+    key = parentMap.has(key) ? parentMap.get(key) : null;
+  }
+  path.reverse();
+  path.shift();
+  return path;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const PLAY_STEP_MS = 110;
+
+// ブロックを経路に沿って1マスずつアニメーションさせながら動かす（本体ゲームと全く同じ仕組み：
+// 要素自体は使い回し、left/topを少しずつ書き換えて、CSSのtransitionで滑らかに見せる）
+async function animatePlayMove(blockId, path) {
+  playState.animating = true;
+  const el = document.getElementById(`block-${blockId}`);
+  for (const step of path) {
+    if (el) {
+      el.style.left = `calc(var(--cell-size) * ${step.x})`;
+      el.style.top = `calc(var(--cell-size) * ${step.y})`;
+    }
+    await sleep(PLAY_STEP_MS);
+  }
+  playState.animating = false;
+}
+
+function handlePlayClick(x, y) {
+  if (playState.animating) return;
+  if (playState.selectedId) {
+    const sel = playState.blocksById[playState.selectedId];
+    if (sel.x === x && sel.y === y) {
+      playState.selectedId = null;
+      playState.reachable = new Map();
+      renderPlaySelectionVisual();
+      renderPlayHighlights();
+      return;
+    }
+    const key = `${x},${y}`;
+    if (playState.reachable.has(key)) {
+      const from = { x: sel.x, y: sel.y };
+      const path = reconstructPlayPath(playState.reachable, x, y);
+      playState.grid[sel.y][sel.x] = null;
+      sel.x = x;
+      sel.y = y;
+      playState.grid[y][x] = sel.id;
+      playState.selectedId = null;
+      playState.reachable = new Map();
+      playState.history.push({ blockId: sel.id, from, to: { x, y }, path });
+      updatePlayUndoButton();
+      renderPlaySelectionVisual();
+      renderPlayHighlights();
+      animatePlayMove(sel.id, path).then(() => {
+        renderPlayGlows();
+        renderPlayBadges();
+        updatePlayBanner();
+      });
+      return;
+    }
+  }
+  if (isPlayOccupied(x, y)) {
+    const id = playState.grid[y][x];
+    const block = playState.blocksById[id];
+    if (!block.movable) {
+      playState.selectedId = null;
+      playState.reachable = new Map();
+      renderPlaySelectionVisual();
+      renderPlayHighlights();
+      return;
+    }
+    playState.selectedId = id;
+    playState.reachable = playComputeReachable(x, y);
+    renderPlaySelectionVisual();
+    renderPlayHighlights();
+  } else {
+    playState.selectedId = null;
+    playState.reachable = new Map();
+    renderPlaySelectionVisual();
+    renderPlayHighlights();
+  }
+}
+
+// 完成した盤面のミニプレビューを描く（本体ゲームの renderClearPreview と同じ考え方）
+function renderPlayClearPreview() {
+  const container = document.getElementById("play-clear-preview");
+  container.innerHTML = "";
+
+  const maxW = 260;
+  const maxH = 170;
+  const size = Math.max(8, Math.min(24, Math.floor(Math.min(maxW / playState.width, maxH / playState.height))));
+  container.style.setProperty("--cell-size", `${size}px`);
+  container.style.width = `${size * playState.width}px`;
+  container.style.height = `${size * playState.height}px`;
+
+  for (const block of Object.values(playState.blocksById)) {
+    const el = renderBlockPreview(block);
+    el.classList.remove("move-selected");
+    container.appendChild(el);
+  }
+  renderEdgeVisuals(container);
+}
+
+// 成立しているかどうかを確認し、成立していれば本体ゲームと同じクリア演出（オーバーレイ）を出す。
+// 本体ゲームはプレイ中は何も表示せず、クリアした時だけオーバーレイが出る仕様なので、それに合わせる。
+function updatePlayBanner() {
+  const overlay = document.getElementById("play-clear-overlay");
+  const result = checkWin(playState.width, playState.height, playState.grid, playState.blocksById, state.edgesV, state.edgesH);
+  if (result.hasEquals && result.win) {
+    renderPlayClearPreview();
+    overlay.hidden = false;
+  } else {
+    overlay.hidden = true;
+  }
+}
+
+// 選択中のブロックだけ枠を付け替える（ブロック要素自体は作り直さない＝アニメーションの邪魔をしない）
+function renderPlaySelectionVisual() {
+  const gridEl = document.getElementById("grid");
+  gridEl.querySelectorAll(".block").forEach((n) => n.classList.remove("move-selected"));
+  if (playState.selectedId) {
+    const el = document.getElementById(`block-${playState.selectedId}`);
+    if (el) el.classList.add("move-selected");
+  }
+}
+
+// 移動先ハイライトだけを差し替える（本体ゲームのrenderHighlightsと同じ、部分更新）
+function renderPlayHighlights() {
+  const gridEl = document.getElementById("grid");
+  gridEl.querySelectorAll(".move-reachable-cell").forEach((n) => n.remove());
+  for (const key of playState.reachable.keys()) {
+    const [x, y] = key.split(",").map(Number);
+    const hl = document.createElement("div");
+    hl.className = "move-reachable-cell";
+    hl.style.left = `calc(var(--cell-size) * ${x})`;
+    hl.style.top = `calc(var(--cell-size) * ${y})`;
+    hl.style.width = "var(--cell-size)";
+    hl.style.height = "var(--cell-size)";
+    gridEl.appendChild(hl);
+  }
+}
+
+// 成立している等式・代入・関数定義の枠、失敗している代入・関数定義の×印を描く（本体ゲームと同じ、部分更新）
+function renderPlayGlows() {
+  const gridEl = document.getElementById("grid");
+  gridEl.querySelectorAll(".equation-glow, .assignment-glow, .assignment-conflict").forEach((n) => n.remove());
+  const PAD = 6;
+  const drawGlow = (run, className) => {
+    const xs = run.blocks.map((b) => b.x);
+    const ys = run.blocks.map((b) => b.y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    const spanX = Math.max(...xs) - minX + 1;
+    const spanY = Math.max(...ys) - minY + 1;
+    const glow = document.createElement("div");
+    glow.className = className;
+    glow.style.left = `calc(var(--cell-size) * ${minX} - ${PAD}px)`;
+    glow.style.top = `calc(var(--cell-size) * ${minY} - ${PAD}px)`;
+    glow.style.width = `calc(var(--cell-size) * ${spanX} + ${PAD * 2}px)`;
+    glow.style.height = `calc(var(--cell-size) * ${spanY} + ${PAD * 2}px)`;
+    gridEl.appendChild(glow);
+    return glow;
+  };
+  const w = playState.width, h = playState.height, grid = playState.grid, blocksById = playState.blocksById;
+  const edgesV = state.edgesV, edgesH = state.edgesH;
+  for (const run of getSatisfiedRuns(w, h, grid, blocksById, edgesV, edgesH)) drawGlow(run, "equation-glow");
+  for (const run of getSatisfiedAssignmentRuns(w, h, grid, blocksById, edgesV, edgesH)) drawGlow(run, "assignment-glow");
+
+  const { varValues, funcs, varCandidates, funcCandidates, satisfiedVarRunIds, satisfiedFuncRunIds, nameCounts, funcNameCounts } =
+    resolveVariables(w, h, grid, blocksById, edgesV, edgesH);
+  const allCandidates = [...varCandidates, ...funcCandidates];
+  const satisfiedAll = new Set([...satisfiedVarRunIds, ...satisfiedFuncRunIds]);
+  for (const cand of allCandidates) {
+    if (satisfiedAll.has(cand.run)) continue;
+    const box = drawGlow(cand.run, "assignment-conflict");
+    const hitzone = document.createElement("div");
+    hitzone.className = "assignment-conflict-hitzone";
+    box.appendChild(hitzone);
+    const reason = explainFailureForCandidate(cand, varValues, funcs, nameCounts, funcNameCounts);
+    attachPlayFailureTooltip(hitzone, reason);
+  }
+}
+
+// まだ成立していない「＝」ブロックに、赤みの色と！マークを付ける（本体ゲームと同じ、部分更新）
+function renderPlayBadges() {
+  const gridEl = document.getElementById("grid");
+  gridEl.querySelectorAll(".eq-warning-badge").forEach((n) => n.remove());
+  const w = playState.width, h = playState.height, grid = playState.grid, blocksById = playState.blocksById;
+  const edgesV = state.edgesV, edgesH = state.edgesH;
+  const runs = getRuns(w, h, grid, blocksById, edgesV, edgesH);
+  const { varValues, funcs } = resolveVariables(w, h, grid, blocksById, edgesV, edgesH);
+  for (const block of Object.values(blocksById)) {
+    if (!(block.type === "symbol" && block.value === "=")) continue;
+    const el = document.getElementById(`block-${block.id}`);
+    if (!el) continue;
+    const wantDir = (block.orientation || "horizontal") === "horizontal" ? "h" : "v";
+    const run = runs.find((r) => r.dir === wantDir && r.blocks.includes(block));
+    const satisfied = !!run && checkRun(run, varValues, funcs);
+    el.classList.toggle("eq-unsatisfied", !satisfied);
+    if (!satisfied) {
+      const badge = document.createElement("div");
+      badge.className = "eq-warning-badge";
+      badge.style.left = `calc(var(--cell-size) * ${block.x + 1} - var(--cell-size) * 0.27)`;
+      badge.style.top = `calc(var(--cell-size) * ${block.y} - var(--cell-size) * 0.07)`;
+      gridEl.appendChild(badge);
+    }
+  }
+}
+
+/* ---- ×印・文字ブロックのホバー／長押しツールチップ（本体ゲームと同じ） ---- */
+function ensurePlayTooltipEl() {
+  let tip = document.getElementById("var-tooltip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "var-tooltip";
+    tip.className = "var-tooltip";
+    document.body.appendChild(tip);
+  }
+  return tip;
+}
+function positionPlayTooltip(tip, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  tip.style.left = `${rect.left + rect.width / 2}px`;
+  tip.style.top = `${rect.top - 8}px`;
+  tip.classList.add("visible");
+}
+function hidePlayTooltip() {
+  const tip = document.getElementById("var-tooltip");
+  if (tip) tip.classList.remove("visible");
+}
+const PLAY_LONG_PRESS_MS = 500;
+function attachPlayFailureTooltip(hitzone, reasonText) {
+  hitzone.addEventListener("mouseenter", () => {
+    const tip = ensurePlayTooltipEl();
+    tip.innerHTML = "";
+    tip.classList.add("tooltip-danger");
+    const line = document.createElement("div");
+    line.className = "var-tooltip-reason";
+    line.textContent = reasonText;
+    tip.appendChild(line);
+    positionPlayTooltip(tip, hitzone);
+  });
+  hitzone.addEventListener("mouseleave", hidePlayTooltip);
+  let touchTimer = null;
+  hitzone.addEventListener("touchstart", (ev) => {
+    ev.stopPropagation();
+    clearTimeout(touchTimer);
+    touchTimer = setTimeout(() => {
+      const tip = ensurePlayTooltipEl();
+      tip.innerHTML = "";
+      tip.classList.add("tooltip-danger");
+      const line = document.createElement("div");
+      line.className = "var-tooltip-reason";
+      line.textContent = reasonText;
+      tip.appendChild(line);
+      positionPlayTooltip(tip, hitzone);
+    }, PLAY_LONG_PRESS_MS);
+  }, { passive: true });
+  hitzone.addEventListener("touchmove", () => clearTimeout(touchTimer));
+  hitzone.addEventListener("touchend", (ev) => { clearTimeout(touchTimer); ev.stopPropagation(); hidePlayTooltip(); });
+  hitzone.addEventListener("touchcancel", () => clearTimeout(touchTimer));
+}
+
+// 盤面の器（マス・辺・ブロック）を最初から組み立てる。移動のたびには呼ばない
+// （ブロック要素を毎回作り直すとアニメーションできなくなるため、位置更新だけで済ませる）
+function renderPlayGrid() {
+  updateCellSize();
+  const gridEl = document.getElementById("grid");
+  gridEl.innerHTML = "";
+  gridEl.style.width = `calc(var(--cell-size) * ${playState.width})`;
+  gridEl.style.height = `calc(var(--cell-size) * ${playState.height})`;
+
+  for (let y = 0; y < playState.height; y++) {
+    for (let x = 0; x < playState.width; x++) {
+      const cellEl = document.createElement("div");
+      cellEl.className = "cell";
+      cellEl.style.left = `calc(var(--cell-size) * ${x})`;
+      cellEl.style.top = `calc(var(--cell-size) * ${y})`;
+      cellEl.dataset.x = x;
+      cellEl.dataset.y = y;
+      cellEl.addEventListener("mousedown", (ev) => {
+        if (ev.button !== 0) return; // プレイ中は右クリック消去などは行わない
+        ev.preventDefault();
+        handlePlayClick(x, y);
+      });
+      cellEl.addEventListener("contextmenu", (ev) => ev.preventDefault());
+      gridEl.appendChild(cellEl);
+
+      const id = playState.grid[y][x];
+      if (id) {
+        const block = playState.blocksById[id];
+        const blockEl = renderBlockPreview(block);
+        if (playState.selectedId === id) blockEl.classList.add("move-selected");
+        gridEl.appendChild(blockEl);
+      }
+    }
+  }
+
+  renderEdgeVisuals(gridEl); // 辺はプレイ中に変わらないので、編集用のstateをそのまま読める
+  renderPlayHighlights();
+  renderPlayGlows();
+  renderPlayBadges();
+  // 本体ゲームと同じく、盤面を開いた／リセットした直後は自動でクリア判定しない
+  // （すでに成立している配置でも、何か動かすまではクリア演出は出ない）。
+  document.getElementById("play-clear-overlay").hidden = true;
+}
+
+// 文字ブロック（変数）はUnicodeの数学用イタリック文字で表示する（本体ゲームと同じ）
+const LETTER_ITALIC_GLYPH = {
+  a: "\u{1D44E}", b: "\u{1D44F}", c: "\u{1D450}", d: "\u{1D451}",
+  x: "\u{1D465}", y: "\u{1D466}", z: "\u{1D467}",
+  f: "\u{1D453}", g: "\u{1D454}", h: "\u{210E}",
+};
+function letterGlyph(value) {
+  return LETTER_ITALIC_GLYPH[value] || value;
+}
+function symbolGlyph(value) {
+  if (value === ":=") return "\u{2254}"; // ≔ (COLON EQUALS)
+  return value;
+}
+
+function renderBlockPreview(block) {
   const el = document.createElement("div");
+  el.id = `block-${block.id}`;
   el.style.left = `calc(var(--cell-size) * ${block.x})`;
   el.style.top = `calc(var(--cell-size) * ${block.y})`;
-
-  if (block.type === "wall") {
-    el.className = "block block-wall";
-    const e = wallEdges[`${block.x},${block.y}`] || {};
-    if (e.t) el.classList.add("edge-t");
-    if (e.r) el.classList.add("edge-r");
-    if (e.b) el.classList.add("edge-b");
-    if (e.l) el.classList.add("edge-l");
-    return el;
-  }
-  if (block.type === "oneway") {
-    el.className = "block block-oneway";
-    const arrow = document.createElement("span");
-    arrow.className = "oneway-arrow";
-    arrow.textContent = { up: "▲", down: "▼", left: "◀", right: "▶" }[block.direction];
-    el.appendChild(arrow);
-    return el;
-  }
-  const kind = block.type === "number" ? "block-number" : "block-symbol";
+  const kind = block.type === "number" ? "block-number" : block.type === "letter" ? "block-letter" : "block-symbol";
   el.className = `block ${kind} ${block.movable ? "" : "fixed"}`;
   const glyph = document.createElement("span");
   glyph.className = "symbol-glyph";
   if (block.type === "number") glyph.textContent = String(block.value);
-  else {
-    glyph.textContent = block.value;
+  else if (block.type === "letter") {
+    glyph.textContent = letterGlyph(block.value);
+  } else {
+    glyph.textContent = symbolGlyph(block.value);
     if (block.value === "=" && block.orientation === "vertical") glyph.classList.add("rotate");
   }
   el.appendChild(glyph);
   return el;
 }
 
+// 壁・一方通行の見た目（赤いバー／ティールの帯＋控えめな矢印）を描画する
+function renderEdgeVisuals(gridEl) {
+  for (let y = 0; y < state.height; y++) {
+    for (let x = 0; x < state.width - 1; x++) {
+      const t = state.edgesV[y][x];
+      if (t === ".") continue;
+      if (t === "#") {
+        const el = document.createElement("div");
+        el.className = "edge-wall edge-wall-v";
+        el.style.left = `calc(var(--cell-size) * ${x + 1} - 3px)`;
+        el.style.top = `calc(var(--cell-size) * ${y})`;
+        el.style.height = "var(--cell-size)";
+        gridEl.appendChild(el);
+      } else {
+        const dirClass = t === ">" ? "dir-right" : "dir-left";
+        const bar = document.createElement("div");
+        bar.className = `edge-oneway-bar ${dirClass}`;
+        bar.style.left = `calc(var(--cell-size) * ${x + 1} - 6px)`;
+        bar.style.top = `calc(var(--cell-size) * ${y})`;
+        bar.style.height = "var(--cell-size)";
+        gridEl.appendChild(bar);
+      }
+    }
+  }
+  for (let y = 0; y < state.height - 1; y++) {
+    for (let x = 0; x < state.width; x++) {
+      const t = state.edgesH[y][x];
+      if (t === ".") continue;
+      if (t === "#") {
+        const el = document.createElement("div");
+        el.className = "edge-wall edge-wall-h";
+        el.style.left = `calc(var(--cell-size) * ${x})`;
+        el.style.top = `calc(var(--cell-size) * ${y + 1} - 3px)`;
+        el.style.width = "var(--cell-size)";
+        gridEl.appendChild(el);
+      } else {
+        const dirClass = t === "v" ? "dir-down" : "dir-up";
+        const bar = document.createElement("div");
+        bar.className = `edge-oneway-bar ${dirClass}`;
+        // .edge-oneway-bar のデフォルト形状（幅12px・高さ1マス分）は縦向き用のまま変えない。
+        // 横向きはCSSのrotate(90deg)で見た目だけ回すので、位置だけ
+        // 「回転後に見せたい横向きの中心」に合わせておけばよい（本体ゲームと同じ方式）。
+        // ここで幅・高さを横向き用に上書きしてしまうと、回転後に一方通行の帯が
+        // マス全体を覆うように広がって表示されてしまう（実際に発生したバグ）。
+        bar.style.left = `calc(var(--cell-size) * ${x} + var(--cell-size) * 0.5 - 6px)`;
+        bar.style.top = `calc(var(--cell-size) * ${y + 1} - var(--cell-size) * 0.5)`;
+        gridEl.appendChild(bar);
+      }
+    }
+  }
+}
+
+// 辺をクリックできる細い当たり判定エリアを、マスとマスの境目に配置する
+function renderEdgeHitzones(gridEl) {
+  for (let y = 0; y < state.height; y++) {
+    for (let x = 0; x < state.width - 1; x++) {
+      const hz = document.createElement("div");
+      hz.className = "edge-hitzone edge-hitzone-v";
+      hz.style.left = `calc(var(--cell-size) * ${x + 1} - 6px)`;
+      hz.style.top = `calc(var(--cell-size) * ${y})`;
+      hz.style.height = "var(--cell-size)";
+      hz.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        handleEdgeClick("v", x, y, ev.button === 2);
+      });
+      hz.addEventListener("contextmenu", (ev) => ev.preventDefault());
+      gridEl.appendChild(hz);
+    }
+  }
+  for (let y = 0; y < state.height - 1; y++) {
+    for (let x = 0; x < state.width; x++) {
+      const hz = document.createElement("div");
+      hz.className = "edge-hitzone edge-hitzone-h";
+      hz.style.left = `calc(var(--cell-size) * ${x})`;
+      hz.style.top = `calc(var(--cell-size) * ${y + 1} - 6px)`;
+      hz.style.width = "var(--cell-size)";
+      hz.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        handleEdgeClick("h", x, y, ev.button === 2);
+      });
+      hz.addEventListener("contextmenu", (ev) => ev.preventDefault());
+      gridEl.appendChild(hz);
+    }
+  }
+}
+
 let isPainting = false;
 document.addEventListener("mouseup", () => { isPainting = false; });
 
-function applyToolAt(x, y, erase) {
-  const token = erase ? "." : toolToToken(currentTool, fixedMode);
+function paintCellAt(x, y) {
+  const token = toolToToken(currentTool);
   if (state.cells[y][x] === token) return;
   state.cells[y][x] = token;
   renderGrid();
 }
 
+// 右クリック：道具に関係なく、そのマスのブロックを常に消す
+function eraseCellAt(x, y) {
+  state.cells[y][x] = ".";
+  moveSelected = null;
+  moveReachable = new Map();
+  renderGrid();
+}
+
+// 「固定」モード：ブロックをクリックするたびに固定⇔動かせる、を切り替える
+function toggleFixedAt(x, y) {
+  const raw = state.cells[y][x];
+  if (raw === "." || raw === "" || raw == null) return; // 何も無ければ無視
+  state.cells[y][x] = raw.endsWith("!") ? raw.slice(0, -1) : `${raw}!`;
+  renderGrid();
+}
+
+function setEdgeAt(orientation, x, y, token) {
+  const arr = orientation === "v" ? state.edgesV : state.edgesH;
+  if (arr[y][x] === token) return;
+  arr[y][x] = token;
+  renderGrid();
+}
+
+// 右クリック：道具に関係なく、その辺（壁・一方通行）を常に消す
+function eraseEdgeAt(orientation, x, y) {
+  setEdgeAt(orientation, x, y, ".");
+}
+
+function handleEdgeClick(orientation, x, y, isRightClick) {
+  if (isRightClick) {
+    eraseEdgeAt(orientation, x, y);
+    return;
+  }
+  if (currentTool.kind === "wall") {
+    setEdgeAt(orientation, x, y, "#");
+    return;
+  }
+  if (currentTool.kind === "oneway") {
+    if (currentTool.axis !== orientation) return; // 辺の向きと合わない一方通行は無視
+    setEdgeAt(orientation, x, y, currentTool.token);
+    return;
+  }
+  if (currentTool.kind === "empty") {
+    eraseEdgeAt(orientation, x, y);
+    return;
+  }
+  // 数字・文字・記号・移動・固定など、辺に無関係な道具の時は何もしない
+}
+
 /* ---- JSON出力／読み込み ---- */
 function buildLevelObject() {
   return {
-    id: document.getElementById("meta-id").value.trim() || "level5",
     name: document.getElementById("meta-name").value.trim() || "ステージ",
     hint: document.getElementById("meta-hint").value,
     grid: state.cells.map((row) => row.slice()),
+    walls: {
+      v: state.edgesV.map((row) => row.slice()),
+      h: state.edgesH.map((row) => row.slice()),
+    },
   };
+}
+
+/* grid / walls.v / walls.h のような2次元配列を、
+   本体ゲームのレベルファイルと同じ「1行(y)が1テキスト行」の見やすい形式で書き出す。
+   （列がそろうよう、トークン幅をそろえてパディングする） */
+function formatMatrix(rows, indent) {
+  if (rows.length === 0) return "[]";
+  const allTokens = rows.flat().map((t) => JSON.stringify(String(t)));
+  const width = Math.max(...allTokens.map((s) => s.length));
+  const ind = " ".repeat(indent);
+  const rowLines = rows.map((row) => {
+    const cells = row.map((t) => JSON.stringify(String(t)).padEnd(width));
+    return `${ind}  [${cells.join(", ")}]`.replace(/ +\]/, "]");
+  });
+  return `[\n${rowLines.join(",\n")}\n${ind}]`;
+}
+
+function formatLevelJSON(level) {
+  const parts = [];
+  parts.push(`  "name": ${JSON.stringify(level.name)}`);
+  parts.push(`  "hint": ${JSON.stringify(level.hint)}`);
+  parts.push(`  "grid": ${formatMatrix(level.grid, 2)}`);
+  if (level.walls) {
+    const vBlock = formatMatrix(level.walls.v, 4);
+    const hBlock = formatMatrix(level.walls.h, 4);
+    parts.push(`  "walls": {\n    "v": ${vBlock},\n    "h": ${hBlock}\n  }`);
+  }
+  return `{\n${parts.join(",\n")}\n}\n`;
 }
 
 function updateJsonOutput() {
   const ta = document.getElementById("json-output");
   if (document.activeElement === ta) return; // 手で編集中は上書きしない
-  ta.value = JSON.stringify(buildLevelObject(), null, 2);
+  ta.value = formatLevelJSON(buildLevelObject());
 }
 
-function updateStatus() {
-  const statusEl = document.getElementById("status");
-  // 妥当なトークンかチェック
-  let unknown = 0;
+// state.cells（マスのトークン文字列）から、ブロックのオブジェクト一覧と、
+// マスの位置→ブロックIDの対応表を作る。updateStatus と お試しプレイ の両方で使う共通処理。
+function buildBlocksFromCells() {
   const blocksById = {};
   let counter = 0;
+  let unknown = 0;
   const grid2 = Array.from({ length: state.height }, () => new Array(state.width).fill(null));
   for (let y = 0; y < state.height; y++) {
     for (let x = 0; x < state.width; x++) {
       const raw = state.cells[y][x];
-      if (raw !== "." && raw !== "" && raw !== "#" && !parseCellToken(raw, x, y)) { unknown++; continue; }
+      if (raw !== "." && raw !== "" && !parseCellToken(raw, x, y)) { unknown++; continue; }
       const b = parseCellToken(raw, x, y);
       if (b) { b.id = `p${++counter}`; blocksById[b.id] = b; grid2[y][x] = b.id; }
     }
   }
+  return { blocksById, grid: grid2, unknown };
+}
+
+function updateStatus() {
+  const statusEl = document.getElementById("status");
+  const { blocksById, grid: grid2, unknown } = buildBlocksFromCells();
   if (unknown > 0) {
     statusEl.className = "status-line status-warn";
     statusEl.textContent = `⚠ 認識できないトークンが ${unknown} 個あります。`;
     return;
   }
-  const result = checkWin(state.width, state.height, grid2, blocksById);
+  const result = checkWin(state.width, state.height, grid2, blocksById, state.edgesV, state.edgesH);
   if (!result.hasEquals) {
     statusEl.className = "status-line status-warn";
     statusEl.textContent = "⚠ ＝（または‖）ブロックがまだ1つもありません。クリア条件が存在しない状態です。";
@@ -771,6 +2313,7 @@ function updateStatus() {
 }
 
 function applyJsonToGrid() {
+  if (playState) exitPlayMode(); // プレイ中にJSONを読み込むと状態が壊れるので、まず編集モードに戻す
   const ta = document.getElementById("json-output");
   let data;
   try {
@@ -791,9 +2334,27 @@ function applyJsonToGrid() {
     const row = data.grid[y] || [];
     return Array.from({ length: w }, (_, x) => (row[x] == null || row[x] === "" ? "." : String(row[x])));
   });
+
+  const normalizeEdge = (t) => {
+    if (t == null || t === "") return ".";
+    const s = String(t).trim();
+    if (s === "V") return "v";
+    if (s === "." || s === "#" || s === ">" || s === "<" || s === "^" || s === "v") return s;
+    return ".";
+  };
+  const vSrc = (data.walls && data.walls.v) || [];
+  const hSrc = (data.walls && data.walls.h) || [];
+  state.edgesV = Array.from({ length: h }, (_, y) => {
+    const row = vSrc[y] || [];
+    return Array.from({ length: Math.max(0, w - 1) }, (_, x) => normalizeEdge(row[x]));
+  });
+  state.edgesH = Array.from({ length: Math.max(0, h - 1) }, (_, y) => {
+    const row = hSrc[y] || [];
+    return Array.from({ length: w }, (_, x) => normalizeEdge(row[x]));
+  });
+
   document.getElementById("size-w").value = w;
   document.getElementById("size-h").value = h;
-  if (data.id) document.getElementById("meta-id").value = data.id;
   if (data.name) document.getElementById("meta-name").value = data.name;
   if (typeof data.hint === "string") document.getElementById("meta-hint").value = data.hint;
   renderGrid();
@@ -801,38 +2362,59 @@ function applyJsonToGrid() {
 
 /* ---- 初期化 ---- */
 function init() {
-  buildPalette();
+  buildBottomToolbar();
   updateToolPreview();
+  rememberHomePositions();
   state.cells = makeEmptyGrid(state.width, state.height, ".");
+  state.edgesV = makeEmptyEdgesV(state.width, state.height);
+  state.edgesH = makeEmptyEdgesH(state.width, state.height);
 
   document.getElementById("size-w").value = state.width;
   document.getElementById("size-h").value = state.height;
 
   document.getElementById("btn-resize").addEventListener("click", () => {
+    if (playState) exitPlayMode(); // プレイ中に盤面サイズを変えると状態が壊れるので、まず編集モードに戻す
     const w = Math.max(3, Math.min(40, parseInt(document.getElementById("size-w").value, 10) || state.width));
     const h = Math.max(3, Math.min(30, parseInt(document.getElementById("size-h").value, 10) || state.height));
     resizeGrid(w, h);
     renderGrid();
   });
 
-  document.getElementById("btn-fill-walls").addEventListener("click", () => {
-    for (let x = 0; x < state.width; x++) { state.cells[0][x] = "#"; state.cells[state.height - 1][x] = "#"; }
-    for (let y = 0; y < state.height; y++) { state.cells[y][0] = "#"; state.cells[y][state.width - 1] = "#"; }
-    renderGrid();
-  });
-
   document.getElementById("btn-clear").addEventListener("click", () => {
     if (!confirm("盤面を全部空にします。よろしいですか？")) return;
+    if (playState) exitPlayMode();
     state.cells = makeEmptyGrid(state.width, state.height, ".");
+    state.edgesV = makeEmptyEdgesV(state.width, state.height);
+    state.edgesH = makeEmptyEdgesH(state.width, state.height);
     renderGrid();
   });
 
-  document.getElementById("toggle-fixed").addEventListener("change", (ev) => {
-    fixedMode = ev.target.checked;
-    updateToolPreview();
+  // 盤面プレビューの右端・下端の＋－ボタン：1マスずつ幅・高さを変える
+  function stepSize(dw, dh) {
+    if (playState) exitPlayMode();
+    const w = Math.max(3, Math.min(40, state.width + dw));
+    const h = Math.max(3, Math.min(30, state.height + dh));
+    if (w === state.width && h === state.height) return;
+    resizeGrid(w, h);
+    document.getElementById("size-w").value = w;
+    document.getElementById("size-h").value = h;
+    renderGrid();
+  }
+  document.getElementById("btn-width-inc").addEventListener("click", () => stepSize(1, 0));
+  document.getElementById("btn-width-dec").addEventListener("click", () => stepSize(-1, 0));
+  document.getElementById("btn-height-inc").addEventListener("click", () => stepSize(0, 1));
+  document.getElementById("btn-height-dec").addEventListener("click", () => stepSize(0, -1));
+
+  document.getElementById("btn-play").addEventListener("click", togglePlayMode);
+  document.getElementById("btn-play-close").addEventListener("click", exitPlayMode);
+  document.getElementById("btn-play-undo").addEventListener("click", undoPlayMove);
+  document.getElementById("btn-play-reset").addEventListener("click", resetPlayMode);
+  document.getElementById("btn-play-clear-replay").addEventListener("click", () => {
+    document.getElementById("play-clear-overlay").hidden = true;
+    resetPlayMode();
   });
 
-  ["meta-id", "meta-name", "meta-hint"].forEach((id) => {
+  ["meta-name", "meta-hint"].forEach((id) => {
     document.getElementById(id).addEventListener("input", updateJsonOutput);
   });
 
@@ -850,23 +2432,37 @@ function init() {
 
   document.getElementById("btn-download-json").addEventListener("click", () => {
     const data = buildLevelObject();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([formatLevelJSON(data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${data.id || "level"}.json`;
+    // ファイル名は何でもよい（tools/puzzle_dropper.py に渡すと、中身を見て
+    // 実際の連番ファイル名は自動で決まるため、ここでは仮の名前にしておく）
+    a.download = "puzzle.json";
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
   });
 
-  // 最初に周囲を壁で囲んだ状態からスタート
-  for (let x = 0; x < state.width; x++) { state.cells[0][x] = "#"; state.cells[state.height - 1][x] = "#"; }
-  for (let y = 0; y < state.height; y++) { state.cells[y][0] = "#"; state.cells[y][state.width - 1] = "#"; }
-
   renderGrid();
 }
+
+let resizeTimer = null;
+function recalcCellSizeAndRender() {
+  updateCellSize();
+  if (!playState) renderGrid(); else renderPlayGrid();
+}
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(recalcCellSizeAndRender, 120);
+});
+// スマホの画面回転時：resizeイベントだけだと、回転直後はまだビューポートの寸法が
+// 更新しきっていないことがあるので、少し待ってからもう一度計算し直す
+window.addEventListener("orientationchange", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(recalcCellSizeAndRender, 250);
+});
 
 document.addEventListener("DOMContentLoaded", init);
 </script>
